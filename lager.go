@@ -25,6 +25,10 @@ type Lager interface {
 	// Or logs nothing if the corresponding log level is not enabled.
 	List(args ...interface{})
 
+	// Same as '.WithCaller(0,-1).List(...)'.  Good to use when your data does
+	// not contain a fairly unique string to search for in the code.
+	CList(args ...interface{})
+
 	// Writes a single log line to Stdout in JSON format encoding a list of
 	// a UTC timestamp (string), the log level (string), and a map composed
 	// of the key/value pairs passed in.  For example:
@@ -34,12 +38,38 @@ type Lager interface {
 	// Or logs nothing if the corresponding log level is not enabled.
 	Map(pairs ...interface{})
 
+	// Same as '.WithCaller(0,-1).Map(...)'.  Good to use when your data does
+	// not contain a fairly unique string to search for in the code.
+	CMap(pairs ...interface{})
+
 	// Gets a new Lager that adds to each log line the key/value pairs from
 	// zero or more context.Context values.
 	With(ctxs ...context.Context) Lager
 
 	// Does this Lager log anything?
 	Enabled() bool
+
+	// Adds a "_stack" key/value pair to the logged context.  The value
+	// is a list of strings where each string is a line number (base 10)
+	// followed by a space and then the code file name (shortened to the last
+	// 'pathParts' components).
+	//
+	// If 'stackLen' is 0 (or negative), then the full stack trace will be
+	// included.  Otherwise, the list will contain at most 'stackLen' strings.
+	// The first string will always be for depth 'minDepth'.
+	//
+	// See WithCaller() for details on usage of 'minDepth' and 'pathParts'.
+	WithStack(minDepth, stackLen, pathParts int) Lager
+
+	// Adds "_file" and "_line" key/value pairs to the logged context.
+	// 'depth' of 0 means the line where WithCaller() was called.  'depth'
+	// of 1 would be the line of the caller of the caller of WithCaller().
+	//
+	// 'pathParts' indicates how many directories to include in the code file
+	// name.  A 0 'pathParts' includes the full path.  A 1 would only include
+	// the file name.  A 2 would include the file name and the deepest sub-
+	// directory name.  A -1 uses the value of lager.PathParts.
+	WithCaller(depth, pathParts int) Lager
 }
 
 type keyStrs struct {
@@ -49,8 +79,12 @@ type keyStrs struct {
 // A stub Lager that outputs nothing:
 type noop struct{}  // Also used as "key" for context.Context decoration.
 func (_ noop) List(_ ...interface{}) {}
+func (_ noop) CList(_ ...interface{}) {}
 func (_ noop) Map(_ ...interface{}) {}
+func (_ noop) CMap(_ ...interface{}) {}
 func (n noop) With(_ ...Ctx) Lager { return n }
+func (n noop) WithStack(_, _, _ int) Lager { return n }
+func (n noop) WithCaller(_, _ int) Lager { return n }
 func (_ noop) Enabled() bool { return false }
 
 type level int8
@@ -82,6 +116,8 @@ var _enabledLevels string
 // Set to a non-nil io.Writer to not write logs to os.Stdout and os.Stderr.
 var OutputDest io.Writer
 
+// 'pathParts' to use when -1 is passed to WithCaller() or WithStack().
+var PathParts = 0
 
 // FUNCS //
 
@@ -235,7 +271,7 @@ func Keys(when, lev, msg, args, ctx, mod string) {
 		_keys = nil
 		return
 	} else if "" == when || "" == lev || "" == args || "" == mod {
-		Exit().List("Only keys for msg and ctx can be blank")
+		Exit().WithCaller(1,-1).List("Only keys for msg and ctx can be blank")
 	}
 	_keys = &keyStrs{
 		when: when, lev: lev, msg: msg, args: args, ctx: ctx, mod: mod}
