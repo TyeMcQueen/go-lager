@@ -104,13 +104,13 @@ func NewModule(name string, defaultLevels ...string) *Module {
 	return storeMod(name, mod)
 }
 
-// En-/disables log levels.  Pass in a string of letters from "FWITDOG" to
+// En-/disables log levels.  Pass in a string of letters from "FWAITDOG" to
 // indicate which log levels should be the only ones that produce output.
-// Each letter is the first letter of a log level (Fail, Warn, Info, Trace,
-// Debug, Obj, or Guts).   Levels Panic and Exit are always enabled.  Init("")
-// copies the current globally enabled levels.  To disable all optional logs,
-// you can use Init("-") as any characters not from "FWITDOG" are silently
-// ignored.  So you can also call Init("Fail Warn Info").
+// Each letter is the first letter of a log level (Fail, Warn, Acc, Info,
+// Trace, Debug, Obj, or Guts).   Levels Panic and Exit are always enabled.
+// Init("") copies the current globally enabled levels.  To disable all
+// optional logs, you can use Init("-") as any characters not from "FWAITDOG"
+// are silently ignored.  So you can also call Init("Fail Warn Acc Info").
 func (m *Module) Init(levels string) *Module {
 	m.levels = ""
 	for l := lFail; l <= lGuts; l++ {
@@ -123,6 +123,7 @@ func (m *Module) Init(levels string) *Module {
 		switch c {
 		case 'F': m.lagers[int(lFail)]  = &logger{lev: lFail,  mod: m.name}
 		case 'W': m.lagers[int(lWarn)]  = &logger{lev: lWarn,  mod: m.name}
+		case 'A': m.lagers[int(lAcc)]   = &logger{lev: lAcc,   mod: m.name}
 		case 'I': m.lagers[int(lInfo)]  = &logger{lev: lInfo,  mod: m.name}
 		case 'T': m.lagers[int(lTrace)] = &logger{lev: lTrace, mod: m.name}
 		case 'D': m.lagers[int(lDebug)] = &logger{lev: lDebug, mod: m.name}
@@ -161,6 +162,11 @@ func (m *Module) Fail(cs ...Ctx) Lager { return m.modLevel(lFail, cs...) }
 // this log level to report unusual conditions that may be signs of problems.
 func (m *Module) Warn(cs ...Ctx) Lager { return m.modLevel(lWarn, cs...) }
 
+// Returns a Lager object.  If Acc log level has been disabled, then the
+// returned Lager will be one that does nothing (produces no output).  Use
+// this log level to write access logs.
+func (m *Module) Acc(cs ...Ctx) Lager { return m.modLevel(lAcc, cs...) }
+
 // Returns a Lager object.  If Info log level is not enabled, then the
 // returned Lager will be one that does nothing (produces no output).  Use
 // this log level to report major milestones that are part of normal flow.
@@ -195,6 +201,7 @@ func (m *Module) Level(lev byte, cs ...Ctx) Lager {
 	case 'E': return m.modLevel(lExit, cs...)
 	case 'F': return m.modLevel(lFail, cs...)
 	case 'W': return m.modLevel(lWarn, cs...)
+	case 'A': return m.modLevel(lAcc, cs...)
 	case 'I': return m.modLevel(lInfo, cs...)
 	case 'T': return m.modLevel(lTrace, cs...)
 	case 'D': return m.modLevel(lDebug, cs...)
@@ -202,5 +209,5 @@ func (m *Module) Level(lev byte, cs ...Ctx) Lager {
 	case 'G': return m.modLevel(lGuts, cs...)
 	}
 	panic(fmt.Sprintf(
-		"Level() must be one char from \"PEFWITDOG\" not %q", lev))
+		"Level() must be one char from \"PEFWAITDOG\" not %q", lev))
 }
