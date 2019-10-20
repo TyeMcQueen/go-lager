@@ -267,6 +267,20 @@ func (b *buffer) close(punct string) {
 	b.delim = comma
 }
 
+// Append a single key/value pair:
+func (b *buffer) pair(k string, v interface{}) {
+	b.quote(k)
+	b.colon()
+	b.scalar(v)
+}
+
+// Append the key/value pairs from AMap:
+func (b *buffer) pairs(m AMap) {
+	for i, k := range m.keys {
+		b.pair(k, m.vals[i])
+	}
+}
+
 // Append a JSON-encoded scalar value to the log line.
 func (b *buffer) scalar(s interface{}) {
 	switch v := s.(type) {
@@ -323,11 +337,7 @@ func (b *buffer) scalar(s interface{}) {
 		b.close("}")
 	case AMap:
 		b.open("{")
-		for i, k := range v.keys {
-			b.quote(k)
-			b.colon()
-			b.scalar(v.vals[i])
-		}
+		b.pairs(v)
 		b.close("}")
 	case map[string]interface{}:
 		keys := make([]string, len(v))
@@ -339,9 +349,7 @@ func (b *buffer) scalar(s interface{}) {
 		sort.Strings(keys)
 		b.open("{")
 		for _, k := range keys {
-			b.quote(k)
-			b.colon()
-			b.scalar(v[k])
+			b.pair(k, v[k])
 		}
 		b.close("}")
 	case error:
