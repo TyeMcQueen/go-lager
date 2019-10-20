@@ -15,6 +15,7 @@ import(
 // signatures.  You never need to use lager.Ctx in your code.
 type Ctx = context.Context
 
+// The interface returned from lager.Warn() and the other log-level selectors.
 type Lager interface {
 	// Writes a single log line to Stdout in JSON format encoding a UTC time-
 	// stamp followed by the log level and the passed-in values.  For example:
@@ -58,7 +59,7 @@ const(
 // A Lager that actually logs.
 type logger struct {
 	lev level       // Log level
-	kvp *KVPairs    // Extra key/value pairs to append to each log line.
+	kvp AMap        // Extra key/value pairs to append to each log line.
 	mod string      // The module name where the log level is en/disabled.
 }
 

@@ -48,7 +48,7 @@ you can accumulate those in a context.Context value that gets passed around
 and then pass that Context in when logging:
 
 	// In a method dispatcher, for example:
-	ctx = lager.AddPairs(ctx, "sourceIP", ip, "user", username)
+	ctx = lager.AddPairs(ctx, "srcIP", ip, "user", username)
 
 	// In a method or code that a method calls, for example:
 	lager.Info(ctx).Map(pairs...)
