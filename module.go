@@ -117,7 +117,7 @@ func (m *Module) Init(levels string) *Module {
 		m.lagers[int(l)] = noop{}
 	}
 	if "" == levels {
-		levels = enabledLevels
+		levels = _enabledLevels
 	}
 	for _, c := range levels {
 		switch c {

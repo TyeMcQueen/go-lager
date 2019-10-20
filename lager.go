@@ -66,10 +66,10 @@ type logger struct {
 // GLOBALS //
 
 // A Lager singleton for each log level (or a noop).
-var lagers [int(nLevels)]Lager
+var _lagers [int(nLevels)]Lager
 
 // The currently enabled log levels (used by module.go).
-var enabledLevels string
+var _enabledLevels string
 
 // Set to a non-nil io.Writer to not write logs to os.Stdout and os.Stderr.
 var OutputDest io.Writer
@@ -78,8 +78,8 @@ var OutputDest io.Writer
 // FUNCS //
 
 func init() {
-	lagers[int(lPanic)] = &logger{lev: lPanic}
-	lagers[int(lExit)] = &logger{lev: lExit}
+	_lagers[int(lPanic)] = &logger{lev: lPanic}
+	_lagers[int(lExit)] = &logger{lev: lExit}
 	Init(os.Getenv("LAGER_LEVELS"))
 }
 
@@ -91,30 +91,30 @@ func init() {
 // you can use Init("-") as any characters not from "FWITDOG" are silently
 // ignored.  So you can also call Init("Fail Warn Info").
 func Init(levels string) {
-	enabledLevels = ""
+	_enabledLevels = ""
 	for l := lFail; l <= lGuts; l++ {
-		lagers[int(l)] = noop{}
+		_lagers[int(l)] = noop{}
 	}
 	if "" == levels {
 		levels = "FW"
 	}
 	for _, c := range levels {
 		switch c {
-		case 'F': lagers[int(lFail)]  = &logger{lev: lFail}
-		case 'W': lagers[int(lWarn)]  = &logger{lev: lWarn}
-		case 'I': lagers[int(lInfo)]  = &logger{lev: lInfo}
-		case 'T': lagers[int(lTrace)] = &logger{lev: lTrace}
-		case 'D': lagers[int(lDebug)] = &logger{lev: lDebug}
-		case 'O': lagers[int(lObj)]   = &logger{lev: lObj}
-		case 'G': lagers[int(lGuts)]  = &logger{lev: lGuts}
+		case 'F': _lagers[int(lFail)]  = &logger{lev: lFail}
+		case 'W': _lagers[int(lWarn)]  = &logger{lev: lWarn}
+		case 'I': _lagers[int(lInfo)]  = &logger{lev: lInfo}
+		case 'T': _lagers[int(lTrace)] = &logger{lev: lTrace}
+		case 'D': _lagers[int(lDebug)] = &logger{lev: lDebug}
+		case 'O': _lagers[int(lObj)]   = &logger{lev: lObj}
+		case 'G': _lagers[int(lGuts)]  = &logger{lev: lGuts}
 		default:  continue
 		}
-		enabledLevels += strconv.QuoteRune(c)
+		_enabledLevels += strconv.QuoteRune(c)
 	}
 }
 
 func forLevel(lev level, cs ...Ctx) Lager {
-	return lagers[int(lev)].With(cs...)
+	return _lagers[int(lev)].With(cs...)
 }
 
 // Returns a Lager object that calls panic().  The JSON log line is first
