@@ -58,5 +58,23 @@ and then pass that Context in when logging:
 	debug.Map(pairs...)
 	debug.List(args...)
 
+Most log archiving systems expect JSON log lines to be a hash not a list.
+This is globally enabled by specifying the keys to use for the items that can
+be included in a log line: timestamp, level, single item, list data, context,
+and module.
+
+	// Example choice of logging keys:
+	lager.Keys("t", "l", "msg", "a", "", "mod")
+
+	// Sample usage of List():
+	lager.Fail(ctx).List("Conn", dest, err)
+	// Example log line from above code:
+	{"t":"2018-12-31 23:59:59.860Z", "l":"FAIL", "a":["Conn", "mx", "reset"]}
+
+	// Sample usage of Map():
+	lager.Warn().Map("Err", err, "for", obj)
+	// Example log line from above code:
+	{"t":"2018-12-31 23:59:59.870Z", "l":"WARN", "Err":"<0", "for":{"cost":-1}}
+
 */
 package lager

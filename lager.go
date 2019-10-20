@@ -42,6 +42,10 @@ type Lager interface {
 	Enabled() bool
 }
 
+type keyStrs struct {
+	when, lev, msg, args, ctx, mod string
+}
+
 // A stub Lager that outputs nothing:
 type noop struct{}  // Also used as "key" for context.Context decoration.
 func (_ noop) List(_ ...interface{}) {}
@@ -68,6 +72,9 @@ type logger struct {
 
 // A Lager singleton for each log level (or a noop).
 var _lagers [int(nLevels)]Lager
+
+// What key strings to use (if any):
+var _keys *keyStrs
 
 // The currently enabled log levels (used by module.go).
 var _enabledLevels string
@@ -212,6 +219,28 @@ func (l level) String() string {
 	return fmt.Sprintf("%d", int(l))
 }
 
+// Output each future log line as a JSON hash ("object") using the given keys.
+// 'when' is used for the timestamp.  'lev' is used for the log level name.
+// 'msg' is either "" or will be used when a single argument is passed to
+// List().  'args' is used for the arguments to List() when 'msg' is not.
+// 'ctx' is used for the hash context values (if any).  Specify "" for 'ctx'
+// to have any context key/value pairs included in-line in the top-level JSON
+// hash (care should be taken to avoid duplicate key names).  'mod' is used
+// for the module name (if any).
+//
+// Pass in 6 empty strings to revert to logging a JSON list (array).
+func Keys(when, lev, msg, args, ctx, mod string) {
+	if  "" == when && "" == lev && "" == args && "" == mod &&
+		"" == ctx && "" == msg {
+		_keys = nil
+		return
+	} else if "" == when || "" == lev || "" == args || "" == mod {
+		Exit().List("Only keys for msg and ctx can be blank")
+	}
+	_keys = &keyStrs{
+		when: when, lev: lev, msg: msg, args: args, ctx: ctx, mod: mod}
+}
+
 func (l *logger) Enabled() bool { return true }
 
 func (l *logger) With(ctxs ...Ctx) Lager {
@@ -239,21 +268,49 @@ func (l *logger) start() *buffer {
 	if nil != OutputDest {
 		b.w = OutputDest
 	}
-	b.open("[")
+
+	if nil == _keys {
+		b.open("[") // ]
+	} else {
+		b.open("{") // }
+		b.quote(_keys.when)
+		b.colon()
+	}
 	b.timestamp()
+
+	if nil != _keys {
+		b.quote(_keys.lev)
+		b.colon()
+	}
 	b.quote(l.lev.String())
+
 	return b
 }
 
 // Common closing steps for both List() and Map() methods.
 func (l *logger) end(b *buffer) {
-	b.scalar(l.kvp)
-	if "" != l.mod {
-		b.write(b.delim, `"module=`)
-		b.escape(l.mod)
-		b.write(`"`)
+	if nil == _keys {
+		b.scalar(l.kvp)
+	} else if "" == _keys.ctx {
+		b.pairs(l.kvp)
+	} else {
+		b.pair(_keys.ctx, l.kvp)
 	}
-	b.close("]\n")
+
+	if "" != l.mod {
+		if nil == _keys {
+			b.quote("mod=" + l.mod)
+		} else {
+			b.pair(_keys.mod, l.mod)
+		}
+	}
+
+	if nil == _keys {   // [
+		b.close("]\n")
+	} else {            // {
+		b.close("}\n")
+	}
+
 	b.delim = ""
 	b.unlock()
 	bufPool.Put(b)
@@ -267,7 +324,13 @@ func (l *logger) end(b *buffer) {
 // Log a list of values (see the Lager interface for more details).
 func (l *logger) List(args ...interface{}) {
 	b := l.start()
-	b.scalar(args)
+	if nil == _keys {
+		b.scalar(args)
+	} else if 1 == len(args) && "" != _keys.msg {
+		b.pair(_keys.msg, args[0])
+	} else {
+		b.pair(_keys.args, args)
+	}
 	l.end(b)
 }
 
