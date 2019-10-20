@@ -121,13 +121,13 @@ func (m *Module) Init(levels string) *Module {
 	}
 	for _, c := range levels {
 		switch c {
-		case 'F': m.lagers[int(lFail)]  = &lager{lev: lFail,  mod: m.name}
-		case 'W': m.lagers[int(lWarn)]  = &lager{lev: lWarn,  mod: m.name}
-		case 'I': m.lagers[int(lInfo)]  = &lager{lev: lInfo,  mod: m.name}
-		case 'T': m.lagers[int(lTrace)] = &lager{lev: lTrace, mod: m.name}
-		case 'D': m.lagers[int(lDebug)] = &lager{lev: lDebug, mod: m.name}
-		case 'O': m.lagers[int(lObj)]   = &lager{lev: lObj,   mod: m.name}
-		case 'G': m.lagers[int(lGuts)]  = &lager{lev: lGuts,  mod: m.name}
+		case 'F': m.lagers[int(lFail)]  = &logger{lev: lFail,  mod: m.name}
+		case 'W': m.lagers[int(lWarn)]  = &logger{lev: lWarn,  mod: m.name}
+		case 'I': m.lagers[int(lInfo)]  = &logger{lev: lInfo,  mod: m.name}
+		case 'T': m.lagers[int(lTrace)] = &logger{lev: lTrace, mod: m.name}
+		case 'D': m.lagers[int(lDebug)] = &logger{lev: lDebug, mod: m.name}
+		case 'O': m.lagers[int(lObj)]   = &logger{lev: lObj,   mod: m.name}
+		case 'G': m.lagers[int(lGuts)]  = &logger{lev: lGuts,  mod: m.name}
 		default:  continue
 		}
 		m.levels += strconv.QuoteRune(c)

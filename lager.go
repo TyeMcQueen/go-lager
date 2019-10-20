@@ -55,7 +55,8 @@ const(
 	nLevels
 )
 
-type lager struct {
+// A Lager that actually logs.
+type logger struct {
 	lev level       // Log level
 	kvp *KVPairs    // Extra key/value pairs to append to each log line.
 	mod string      // The module name where the log level is en/disabled.
@@ -77,8 +78,8 @@ var OutputDest io.Writer
 // FUNCS //
 
 func init() {
-	lagers[int(lPanic)] = &lager{lev: lPanic}
-	lagers[int(lExit)] = &lager{lev: lExit}
+	lagers[int(lPanic)] = &logger{lev: lPanic}
+	lagers[int(lExit)] = &logger{lev: lExit}
 	Init(os.Getenv("LAGER_LEVELS"))
 }
 
@@ -99,13 +100,13 @@ func Init(levels string) {
 	}
 	for _, c := range levels {
 		switch c {
-		case 'F': lagers[int(lFail)]  = &lager{lev: lFail}
-		case 'W': lagers[int(lWarn)]  = &lager{lev: lWarn}
-		case 'I': lagers[int(lInfo)]  = &lager{lev: lInfo}
-		case 'T': lagers[int(lTrace)] = &lager{lev: lTrace}
-		case 'D': lagers[int(lDebug)] = &lager{lev: lDebug}
-		case 'O': lagers[int(lObj)]   = &lager{lev: lObj}
-		case 'G': lagers[int(lGuts)]  = &lager{lev: lGuts}
+		case 'F': lagers[int(lFail)]  = &logger{lev: lFail}
+		case 'W': lagers[int(lWarn)]  = &logger{lev: lWarn}
+		case 'I': lagers[int(lInfo)]  = &logger{lev: lInfo}
+		case 'T': lagers[int(lTrace)] = &logger{lev: lTrace}
+		case 'D': lagers[int(lDebug)] = &logger{lev: lDebug}
+		case 'O': lagers[int(lObj)]   = &logger{lev: lObj}
+		case 'G': lagers[int(lGuts)]  = &logger{lev: lGuts}
 		default:  continue
 		}
 		enabledLevels += strconv.QuoteRune(c)
@@ -202,9 +203,9 @@ func (l level) String() string {
 	return fmt.Sprintf("%d", int(l))
 }
 
-func (l *lager) Enabled() bool { return true }
+func (l *logger) Enabled() bool { return true }
 
-func (l *lager) With(ctxs ...Ctx) Lager {
+func (l *logger) With(ctxs ...Ctx) Lager {
 	kvp := l.kvp
 	for _, ctx := range ctxs {
 		kvp = kvp.Merge(ContextPairs(ctx))
@@ -218,7 +219,7 @@ func (l *lager) With(ctxs ...Ctx) Lager {
 }
 
 // Common opening steps for both List() and Map() methods.
-func (l *lager) start() *buffer {
+func (l *logger) start() *buffer {
 	b := bufPool.Get().(*buffer)
 	switch l.lev {
 	case lPanic, lExit:
@@ -236,7 +237,7 @@ func (l *lager) start() *buffer {
 }
 
 // Common closing steps for both List() and Map() methods.
-func (l *lager) end(b *buffer) {
+func (l *logger) end(b *buffer) {
 	b.scalar(l.kvp)
 	if "" != l.mod {
 		b.write(b.delim, `"module=`)
@@ -255,14 +256,14 @@ func (l *lager) end(b *buffer) {
 }
 
 // Log a list of values (see the Lager interface for more details).
-func (l *lager) List(args ...interface{}) {
+func (l *logger) List(args ...interface{}) {
 	b := l.start()
 	b.scalar(args)
 	l.end(b)
 }
 
 // Log a map of key/value pairs (see the Lager interface for more details).
-func (l *lager) Map(pairs ...interface{}) {
+func (l *logger) Map(pairs ...interface{}) {
 	b := l.start()
 	b.scalar(RawMap(pairs))
 	l.end(b)
