@@ -276,8 +276,10 @@ func (b *buffer) pair(k string, v interface{}) {
 
 // Append the key/value pairs from AMap:
 func (b *buffer) pairs(m AMap) {
-	for i, k := range m.keys {
-		b.pair(k, m.vals[i])
+	if nil != m {
+		for i, k := range m.keys {
+			b.pair(k, m.vals[i])
+		}
 	}
 }
 
