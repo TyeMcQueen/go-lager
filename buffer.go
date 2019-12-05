@@ -105,6 +105,7 @@ func (b *buffer) quote(s string) {
 	b.write(b.delim, `"`)
 	b.escape(s)
 	b.write(`"`)
+	b.delim = comma
 }
 
 var noEsc [256]bool
