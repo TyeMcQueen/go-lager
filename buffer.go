@@ -85,10 +85,7 @@ func (b *buffer) writeBytes(s []byte) {
 	if cap(b.buf) < len(s) {
 		b.w.Write(s)    // Next chunk won't fit in buffer, just write it.
 	} else {
-		was := len(b.buf)
-		will := was + len(s)
-		copy(b.buf[was:will], s)
-		b.buf = b.buf[0:will]
+		b.buf = append(b.buf, s...)
 	}
 }
 
@@ -99,7 +96,7 @@ func (b *buffer) write(strs ...string) {
 			b.lock()
 		}
 		if cap(b.buf) < len(s) {
-			b.w.Write([]byte(s))
+			io.WriteString(b.w, s)
 		} else {
 			was := len(b.buf)
 			will := was + len(s)
@@ -152,11 +149,9 @@ func (b *buffer) escape(s string) {
 			}
 			next = string(buf)
 		}
-		if "" != next {
-			b.write(s[beg:i])
-			b.write(next)
-			beg = i+1
-		}
+		b.write(s[beg:i])
+		b.write(next)
+		beg = i+1
 	}
 	b.write(s[beg:])
 }
@@ -186,11 +181,9 @@ func (b *buffer) escapeBytes(s []byte) {
 			}
 			next = string(buf)
 		}
-		if "" != next {
-			b.writeBytes(s[beg:i])
-			b.write(next)
-			beg = i+1
-		}
+		b.writeBytes(s[beg:i])
+		b.write(next)
+		beg = i+1
 	}
 	b.writeBytes(s[beg:])
 }
