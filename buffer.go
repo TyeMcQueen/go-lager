@@ -42,6 +42,17 @@ const comma = ", "
 
 // FUNCS //
 
+var noEsc [256]bool
+var hexDigits = "0123456789abcdef"
+
+func init() {
+	for c := ' '; c < 256; c++ {
+		noEsc[c] = true
+	}
+	noEsc['"'] = false
+	noEsc['\\'] = false
+}
+
 // Called when we need to flush early, to prevent interleaved log lines.
 func (b *buffer) lock() {
 	if ! b.locked {
@@ -108,15 +119,11 @@ func (b *buffer) quote(s string) {
 	b.delim = comma
 }
 
-var noEsc [256]bool
-var hexDigits = "0123456789abcdef"
-
-func init() {
-	for c := ' '; c < 256; c++ {
-		noEsc[c] = true
-	}
-	noEsc['"'] = false
-	noEsc['\\'] = false
+// Append a quoted (JSON) string (from a byte slice) to the log line.
+func (b *buffer) quoteBytes(s []byte) {
+	b.write(b.delim, `"`)
+	b.escapeBytes(s)
+	b.write(`"`)
 }
 
 // Append an escaped string as part of a quoted JSON string.
@@ -152,13 +159,6 @@ func (b *buffer) escape(s string) {
 		}
 	}
 	b.write(s[beg:])
-}
-
-// Append a quoted (JSON) string (from a byte slice) to the log line.
-func (b *buffer) quoteBytes(s []byte) {
-	b.write(b.delim, `"`)
-	b.escapeBytes(s)
-	b.write(`"`)
 }
 
 // Append an escaped string (from a byte slice), part of a quoted JSON string.
