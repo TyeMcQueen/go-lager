@@ -17,7 +17,7 @@ import(
 // An unshared, temporary structure for efficiently logging one line.
 type buffer struct {
 	scratch [16*1024]byte   // Space so we can allocate memory only rarely.
-	buf     []byte          // Bytes not yet written (slice into above).
+	buf     []byte          // Bytes not yet written (a slice into above).
 	w       io.Writer       // Usually os.Stdout, else os.Stderr.
 	delim   string          // Delimiter to go before next value.
 	locked  bool            // Whether we had to lock outMu.
@@ -65,7 +65,7 @@ func (b *buffer) lock() {
 	}
 }
 
-// Called when finished composing log line.
+// Called when finished composing a log line.
 func (b *buffer) unlock() {
 	if 0 < len(b.buf) {
 		b.w.Write(b.buf)
@@ -80,10 +80,10 @@ func (b *buffer) unlock() {
 // Append a slice of bytes to the log line.
 func (b *buffer) writeBytes(s []byte) {
 	if cap(b.buf) < len(b.buf) + len(s) {
-		b.lock()
+		b.lock()    // Can't fit line in buffer; lock output mutex and flush.
 	}
 	if cap(b.buf) < len(s) {
-		b.w.Write(s)
+		b.w.Write(s)    // Next chunk won't fit in buffer, just write it.
 	} else {
 		was := len(b.buf)
 		will := was + len(s)

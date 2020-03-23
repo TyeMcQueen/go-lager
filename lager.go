@@ -113,7 +113,8 @@ var _keys *keyStrs
 // The currently enabled log levels (used by module.go).
 var _enabledLevels string
 
-// Set to a non-nil io.Writer to not write logs to os.Stdout and os.Stderr.
+// Set OutputDest to a non-nil io.Writer to not write logs to os.Stdout and
+// os.Stderr.
 var OutputDest io.Writer
 
 // 'pathParts' to use when -1 is passed to WithCaller() or WithStack().
