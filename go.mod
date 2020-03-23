@@ -1,6 +1,6 @@
 module gitlab.internal.unity3d.com/sre/lager
 
-go 1.12
+go 1.13
 
 require (
 	github.com/rs/zerolog v1.14.3
