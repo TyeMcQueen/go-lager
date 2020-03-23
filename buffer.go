@@ -4,6 +4,7 @@ package lager
 
 import(
 	"encoding/json"
+	"fmt"
 	"io"
 	"sort"
 	"strconv"
@@ -339,7 +340,7 @@ func (b *buffer) scalar(s interface{}) {
 	default:
 		buf, err := json.Marshal(v)
 		if nil != err {
-			b.quote("! ", err.Error())
+			b.quote("! ", err.Error(), "; ", fmt.Sprintf("%#v", v))
 		} else {
 			b.writeBytes(buf)
 		}
