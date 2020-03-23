@@ -127,10 +127,13 @@ func escapeByte(c byte) string {
 	return string(buf)
 }
 
-// Append a quoted (JSON) string to the log lien.
-func (b *buffer) quote(s string) {
+// Append a quoted (JSON) string to the log line.  If more than one string
+// is passed in, then they are concatenated together.
+func (b *buffer) quote(strs ...string) {
 	b.write(b.delim, `"`)
-	b.escape(s)
+	for _, s := range strs {
+		b.escape(s)
+	}
 	b.write(`"`)
 	b.delim = comma
 }
@@ -336,7 +339,7 @@ func (b *buffer) scalar(s interface{}) {
 	default:
 		buf, err := json.Marshal(v)
 		if nil != err {
-			b.quote("! " + err.Error())
+			b.quote("! ", err.Error())
 		} else {
 			b.writeBytes(buf)
 		}
