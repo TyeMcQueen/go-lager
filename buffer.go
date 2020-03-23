@@ -108,6 +108,25 @@ func (b *buffer) write(strs ...string) {
 	}
 }
 
+func escapeByte(c byte) string {
+	switch c {
+	case '"':   return "\\\""
+	case '\\':  return "\\\\"
+	case '\b':  return "\\b"
+	case '\f':  return "\\f"
+	case '\n':  return "\\n"
+	case '\r':  return "\\r"
+	case '\t':  return "\\t"
+	}
+	buf := []byte("\\u0000")
+	for o := 5; 1 < o; o-- {
+		h := c & 0xF
+		buf[o] = hexDigits[h]
+		c >>= 4
+	}
+	return string(buf)
+}
+
 // Append a quoted (JSON) string to the log lien.
 func (b *buffer) quote(s string) {
 	b.write(b.delim, `"`)
@@ -131,26 +150,8 @@ func (b *buffer) escape(s string) {
 		if noEsc[c] {
 			continue
 		}
-		next := ""
-		switch c {
-		case '"':   next = "\\\""
-		case '\\':  next = "\\\\"
-		case '\b':  next = "\\b"
-		case '\f':  next = "\\f"
-		case '\n':  next = "\\n"
-		case '\r':  next = "\\r"
-		case '\t':  next = "\\t"
-		default:
-			buf := []byte("\\u0000")
-			for o := 5; 1 < o; o-- {
-				h := c & 0xF
-				buf[o] = hexDigits[h]
-				c >>= 4
-			}
-			next = string(buf)
-		}
 		b.write(s[beg:i])
-		b.write(next)
+		b.write(escapeByte(c))
 		beg = i+1
 	}
 	b.write(s[beg:])
@@ -163,26 +164,8 @@ func (b *buffer) escapeBytes(s []byte) {
 		if noEsc[c] {
 			continue
 		}
-		next := ""
-		switch c {
-		case '"':   next = "\\\""
-		case '\\':  next = "\\\\"
-		case '\b':  next = "\\b"
-		case '\f':  next = "\\f"
-		case '\n':  next = "\\n"
-		case '\r':  next = "\\r"
-		case '\t':  next = "\\t"
-		default:
-			buf := []byte("\\u0000")
-			for o := 5; 1 < o; o-- {
-				h := c & 0xF
-				buf[o] = hexDigits[h]
-				c >>= 4
-			}
-			next = string(buf)
-		}
 		b.writeBytes(s[beg:i])
-		b.write(next)
+		b.write(escapeByte(c))
 		beg = i+1
 	}
 	b.writeBytes(s[beg:])
