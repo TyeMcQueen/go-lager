@@ -1,4 +1,4 @@
-module gitlab.internal.unity3d.com/sre/lager
+module github.com/TyeMcQueen/go-lager
 
 go 1.13
 

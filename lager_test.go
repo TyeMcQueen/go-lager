@@ -8,7 +8,7 @@ import(
 	"os"
 	"testing"
 
-	"gitlab.internal.unity3d.com/sre/lager"
+	"github.com/TyeMcQueen/go-lager"
 	"github.com/rs/zerolog"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
