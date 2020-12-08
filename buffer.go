@@ -267,6 +267,9 @@ func (b *buffer) pairs(m AMap) {
 // Append a JSON-encoded scalar value to the log line.
 func (b *buffer) scalar(s interface{}) {
 	switch v := s.(type) {
+	case func() interface{}: s = v()
+	}
+	switch v := s.(type) {
 	case AMap: if nil == v || 0 == len(v.keys) { return }
 	}
 	b.write(b.delim)
