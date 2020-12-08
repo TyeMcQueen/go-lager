@@ -309,15 +309,22 @@ func (b *buffer) scalar(s interface{}) {
 		b.close("]")
 	case RawMap:
 		b.open("{")
+		skipping := false
 		for i, elt := range v {
 			if 0 == 1 & i {
-				b.quote(S(elt))
-				b.colon()
+				if _, ok := elt.(skipThisPair); ok {
+					skipping = true
+				} else {
+					b.quote(S(elt))
+					b.colon()
+				}
+			} else if skipping {
+				skipping = false
 			} else {
 				b.scalar(elt)
 			}
 		}
-		if 1 == 1 & len(v) {
+		if 1 == 1 & len(v) && ! skipping {
 			b.scalar(nil)
 		}
 		b.close("}")

@@ -6,6 +6,10 @@ import(
 )
 
 
+type skipThisPair string
+var SkipThisPair = skipThisPair("")
+
+
 // Storage for an ordered list of key/value pairs (without duplicate keys).
 type KVPairs struct {
 	keys    []string
@@ -55,6 +59,26 @@ func Map(pairs ...interface{}) RawMap { return RawMap(pairs) }
 // log line.
 func Pairs(pairs ...interface{}) AMap {
 	return AMap(nil).AddPairs(pairs...)
+}
+
+// Unless() is used to pass an optional label+value pair to Map().  Use
+// Unless() to specify the label and, if the value is unsafe to compute, then
+// wrap it in a deferring function:
+//
+//      lager.Debug().Map(
+//          "Ran", stage,
+//          // Don't include `"Error": null,` in the log:
+//          lager.Unless(nil == err, "Error"), err,
+//          // Don't call config.Proxy() if config is nil:
+//          lager.Unless(nil == config, "Proxy"),
+//              func() interface{} { return config.Proxy() },
+//      )
+//
+func Unless(cond bool, label string) interface{} {
+	if ! cond {
+		return label
+	}
+	return SkipThisPair
 }
 
 // Add/update Lager key/value pairs to/in a context.Context.
