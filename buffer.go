@@ -24,6 +24,11 @@ type buffer struct {
 	locked  bool            // Whether we had to lock outMu.
 }
 
+// A Stringer just has a String() method that returns its stringification.
+type Stringer interface {
+	String() string
+}
+
 
 // GLOBALS //
 
@@ -347,6 +352,8 @@ func (b *buffer) scalar(s interface{}) {
 		b.close("}")
 	case error:
 		b.quote(v.Error())
+	case Stringer:
+		b.quote(v.String())
 	default:
 		buf, err := json.Marshal(v)
 		if nil != err {
