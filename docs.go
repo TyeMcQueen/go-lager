@@ -25,6 +25,7 @@ usually use them via code similar to:
 	lager.Exit().Map(pairs...)  // To Stderr, calls os.Exit(1), always enabled.
 	lager.Fail().List(args...)  // For non-normal failures (default on).
 	lager.Warn().Map(pairs...)  // For warnings (default on).
+	lager.Note().Map(pairs...)  // For normal, important notices (default on).
 	lager.Acc().Map(pairs...)   // For access logs (default on).
 	lager.Info().List(args...)  // For normal events (default off).
 	laber.Trace().List(args...) // For tracing code flow (default off).
@@ -33,13 +34,13 @@ usually use them via code similar to:
 	lager.Guts().Map(pairs...)  // For volumious data dumps (default off).
 
 The Panic and Exit levels cannot be disabled.  Of the others, only Fail, Warn,
-and Acc levels are enabled by default.  When the Lager module is initialized,
-the following code is called:
+Note, and Acc levels are enabled by default.  When the Lager module is
+initialized, the following code is called:
 
 	lager.Init(os.Getenv("LAGER_LEVELS"))
 
-and lager.Init("") is the same as lager.Init("Fail Warn Acc") [which is the
-same as lager.Init("FWA")].  So you can set the LAGER_LEVELS environment
+and lager.Init("") is the same as lager.Init("Fail Warn Note Acc") [which is
+the same as lager.Init("FWNA")].  So you can set the LAGER_LEVELS environment
 variable to change which log levels are enabled.  Application code can also
 choose to support other ways to override those defaults.
 

@@ -90,7 +90,7 @@ func (_ noop) Enabled() bool { return false }
 type level int8
 const(
 	lPanic level = iota
-	lExit; lFail; lWarn; lAcc; lInfo; lTrace; lDebug; lObj; lGuts
+	lExit; lFail; lWarn; lNote; lAcc; lInfo; lTrace; lDebug; lObj; lGuts
 	nLevels
 )
 
@@ -128,13 +128,14 @@ func init() {
 	Init(os.Getenv("LAGER_LEVELS"))
 }
 
-// En-/disables log levels.  Pass in a string of letters from "FWAITDOG" to
+// En-/disables log levels.  Pass in a string of letters from "FWNAITDOG" to
 // indicate which log levels should be the only ones that produce output.
-// Each letter is the first letter of a log level (Fail, Warn, Acc, Info,
-// Trace, Debug, Obj, or Guts).   Levels Panic and Exit are always enabled.
-// Init("") acts like Init("FWA"), the default setting.  To disable all
-// optional logs, you can use Init("-") as any characters not from "FWAITDOG"
-// are silently ignored.  So you can also call Init("Fail Warn Acc Info").
+// Each letter is the first letter of a log level (Fail, Warn, Note, Acc,
+// Info, Trace, Debug, Obj, or Guts).   Levels Panic and Exit are always
+// enabled.  Init("") acts like Init("FWNA"), the default setting.  To
+// disable all optional logs, you can use Init("-") as any characters not
+// from "FWNAITDOG" are silently ignored.  So you can also call
+// Init("Fail Warn Note Acc Info").
 func Init(levels string) {
 	_enabledLevels = ""
 	for l := lFail; l <= lGuts; l++ {
@@ -147,6 +148,7 @@ func Init(levels string) {
 		switch c {
 		case 'F': _lagers[int(lFail)]  = &logger{lev: lFail}
 		case 'W': _lagers[int(lWarn)]  = &logger{lev: lWarn}
+		case 'N': _lagers[int(lNote)]  = &logger{lev: lNote}
 		case 'A': _lagers[int(lAcc)]   = &logger{lev: lAcc}
 		case 'I': _lagers[int(lInfo)]  = &logger{lev: lInfo}
 		case 'T': _lagers[int(lTrace)] = &logger{lev: lTrace}
@@ -185,6 +187,11 @@ func Fail(cs ...Ctx) Lager { return forLevel(lFail, cs...) }
 // this log level to report unusual conditions that may be signs of problems.
 func Warn(cs ...Ctx) Lager { return forLevel(lWarn, cs...) }
 
+// Returns a Lager object.  If Note log level has been disabled, then the
+// returned Lager will be one that does nothing (produces no output).  Use
+// this log level to report major milestones that are part of normal flow.
+func Note(cs ...Ctx) Lager { return forLevel(lNote, cs...) }
+
 // Returns a Lager object.  If Acc log level has been disabled, then the
 // returned Lager will be one that does nothing (produces no output).  Use
 // this log level to write access logs.  The level is recorded as "ACCESS".
@@ -192,7 +199,7 @@ func Acc(cs ...Ctx) Lager { return forLevel(lAcc, cs...) }
 
 // Returns a Lager object.  If Info log level is not enabled, then the
 // returned Lager will be one that does nothing (produces no output).  Use
-// this log level to report major milestones that are part of normal flow.
+// this log level to report minor milestones that are part of normal flow.
 func Info(cs ...Ctx) Lager { return forLevel(lInfo, cs...) }
 
 // Returns a Lager object.  If Trace log level is not enabled, then the
@@ -216,7 +223,7 @@ func Obj(cs ...Ctx) Lager { return forLevel(lObj, cs...) }
 // when debugging.
 func Guts(cs ...Ctx) Lager { return forLevel(lGuts, cs...) }
 
-// Pass in one character from "PEFWAITDOG" to get a Lager object that either
+// Pass in one character from "PEFWNAITDOG" to get a Lager object that either
 // logs or doesn't, depending on whether the specified log level is enabled.
 func Level(lev byte, cs ...Ctx) Lager {
 	switch lev {
@@ -224,6 +231,7 @@ func Level(lev byte, cs ...Ctx) Lager {
 	case 'E': return forLevel(lExit, cs...)
 	case 'F': return forLevel(lFail, cs...)
 	case 'W': return forLevel(lWarn, cs...)
+	case 'N': return forLevel(lNote, cs...)
 	case 'A': return forLevel(lAcc, cs...)
 	case 'I': return forLevel(lInfo, cs...)
 	case 'T': return forLevel(lTrace, cs...)
@@ -232,7 +240,7 @@ func Level(lev byte, cs ...Ctx) Lager {
 	case 'G': return forLevel(lGuts, cs...)
 	}
 	panic(fmt.Sprintf(
-		"Level() must be one char from \"PEFWAITDOG\" not %q", lev))
+		"Level() must be one char from \"PEFWNAITDOG\" not %q", lev))
 }
 
 var levNames = map[level]string{
@@ -240,6 +248,7 @@ var levNames = map[level]string{
 	lExit:  "EXIT",
 	lFail:  "FAIL",
 	lWarn:  "WARN",
+	lNote:  "NOTE",
 	lAcc:   "ACCESS",
 	lInfo:  "INFO",
 	lTrace: "TRACE",
@@ -275,7 +284,8 @@ func Keys(when, lev, msg, args, ctx, mod string) {
 		Exit().WithCaller(1,-1).List("Only keys for msg and ctx can be blank")
 	}
 	_keys = &keyStrs{
-		when: when, lev: lev, msg: msg, args: args, ctx: ctx, mod: mod}
+		when: when, lev: lev, msg: msg, args: args, ctx: ctx, mod: mod,
+	}
 }
 
 func (l *logger) Enabled() bool { return true }
