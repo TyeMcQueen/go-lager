@@ -123,7 +123,8 @@ var PathParts = 0
 
 // LevelNotation takes a log level name (like "DEBUG") and returns how that
 // level should be shown in the log.  This defaults to not changing the
-// level name.
+// level name.  If the environment variable LAGER_GCP is non-empty, then
+// it instead defaults to using GcpLevelName().
 var LevelNotation = func(lev string) string { return lev }
 
 // FUNCS //
@@ -133,6 +134,10 @@ func init() {
 	_lagers[int(lExit)] = &logger{lev: lExit}
 	Init(os.Getenv("LAGER_LEVELS"))
 
+	if "" != os.Getenv("LAGER_GCP") {
+		Keys("timestamp", "severity", "message", "data", "", "module")
+		LevelNotation = GcpLevelName
+	}
 	if k := os.Getenv("LAGER_KEYS"); "" != k {
 		keys := strings.Split(k, ",")
 		if 6 != len(keys) {
@@ -293,7 +298,8 @@ func (l level) String() string {
 //
 // If the environment variable LAGER_KEYS is set it must contain 6 key
 // names separated by commas and those become the default keys to use.
-// For example:
+// Otherwise, if the environment variable LAGER_GCP is not empty, then
+// it is as if you had the following set (among other changes):
 //      LAGER_KEYS="timestamp,severity,message,data,,module"
 //
 // Pass in 6 empty strings to revert to logging a JSON list (array).

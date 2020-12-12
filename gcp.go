@@ -23,6 +23,9 @@ import (
 //      Trace, Debug, Obj, Guts - Debug ("100")
 //      Not possible (except due to bug in Lager): Default ("0")
 //
+// If the environment variable LAGER_GCP is not empty, then
+// lager.LevelNotation will be initalized to lager.GcpLevelName.
+//
 func GcpLevelName(lev string) string {
 	sev := logging.Default  // This value will never get used, however.
 	switch lev[0] {
