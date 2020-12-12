@@ -412,6 +412,10 @@ func (l *logger) List(args ...interface{}) {
 // Log a map of key/value pairs (see the Lager interface for more details).
 func (l *logger) Map(pairs ...interface{}) {
 	b := l.start()
-	b.scalar(RawMap(pairs))
+	if nil == _keys {
+		b.scalar(RawMap(pairs))
+	} else {
+		b.rawPairs(RawMap(pairs))
+	}
 	l.end(b)
 }
