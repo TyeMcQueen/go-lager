@@ -120,6 +120,11 @@ var OutputDest io.Writer
 // 'pathParts' to use when -1 is passed to WithCaller() or WithStack().
 var PathParts = 0
 
+// LevelNotation takes a log level name (like "DEBUG") and returns how that
+// level should be shown in the log.  This defaults to not changing the
+// level name.
+var LevelNotation = func(lev string) string { return lev }
+
 // FUNCS //
 
 func init() {
@@ -329,7 +334,7 @@ func (l *logger) start() *buffer {
 		b.quote(_keys.lev)
 		b.colon()
 	}
-	b.quote(l.lev.String())
+	b.scalar(LevelNotation(l.lev.String()))
 
 	return b
 }
