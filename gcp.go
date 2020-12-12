@@ -5,8 +5,6 @@ import (
 	"net/http"
 	"strconv"
 	"time"
-
-	"cloud.google.com/go/logging"
 )
 
 
@@ -27,24 +25,21 @@ import (
 // lager.LevelNotation will be initalized to lager.GcpLevelName.
 //
 func GcpLevelName(lev string) string {
-	sev := logging.Default  // This value will never get used, however.
 	switch lev[0] {
-	//  logging.Alert() not used
-	//  logging.Emergency() not used
 	case 'P': case 'E':
-		sev = logging.Critical
+		return "600"
 	case 'F':
-		sev = logging.Error
+		return "500"
 	case 'W':
-		sev = logging.Warning
+		return "400"
 	case 'N':
-		sev = logging.Notice
+		return "300"
 	case 'A': case 'I':
-		sev = logging.Info
+		return "200"
 	case 'T': case 'D': case 'O': case 'G':
-		sev = logging.Debug
+		return "100"
 	}
-	return sev.String()
+	return "0"
 }
 
 
