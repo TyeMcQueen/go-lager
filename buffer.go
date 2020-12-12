@@ -269,6 +269,28 @@ func (b *buffer) pairs(m AMap) {
 	}
 }
 
+// Append the key/value pairs from a RawMap:
+func (b *buffer) rawPairs(m RawMap) {
+	skipping := false
+	for i, elt := range m {
+		if 0 == 1 & i {
+			if _, ok := elt.(skipThisPair); ok {
+				skipping = true
+			} else {
+				b.quote(S(elt))
+				b.colon()
+			}
+		} else if skipping {
+			skipping = false
+		} else {
+			b.scalar(elt)
+		}
+	}
+	if 1 == 1 & len(m) && ! skipping {
+		b.scalar(nil)
+	}
+}
+
 // Append a JSON-encoded scalar value to the log line.
 func (b *buffer) scalar(s interface{}) {
 	switch v := s.(type) {
@@ -314,24 +336,7 @@ func (b *buffer) scalar(s interface{}) {
 		b.close("]")
 	case RawMap:
 		b.open("{")
-		skipping := false
-		for i, elt := range v {
-			if 0 == 1 & i {
-				if _, ok := elt.(skipThisPair); ok {
-					skipping = true
-				} else {
-					b.quote(S(elt))
-					b.colon()
-				}
-			} else if skipping {
-				skipping = false
-			} else {
-				b.scalar(elt)
-			}
-		}
-		if 1 == 1 & len(v) && ! skipping {
-			b.scalar(nil)
-		}
+		b.rawPairs(v)
 		b.close("}")
 	case AMap:
 		b.open("{")
