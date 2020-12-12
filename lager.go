@@ -6,6 +6,7 @@ import(
 	"io"
 	"os"
 	"strconv"
+	"strings"
 )
 
 
@@ -131,6 +132,17 @@ func init() {
 	_lagers[int(lPanic)] = &logger{lev: lPanic}
 	_lagers[int(lExit)] = &logger{lev: lExit}
 	Init(os.Getenv("LAGER_LEVELS"))
+
+	if k := os.Getenv("LAGER_KEYS"); "" != k {
+		keys := strings.Split(k, ",")
+		if 6 != len(keys) {
+			Exit().Map(
+				"LAGER_KEYS expected 6 comma-separated labels not", len(keys),
+				"Value", k,
+			)
+		}
+		Keys(keys[0], keys[1], keys[2], keys[3], keys[4], keys[5])
+	}
 }
 
 // En-/disables log levels.  Pass in a string of letters from "FWNAITDOG" to
@@ -278,6 +290,11 @@ func (l level) String() string {
 // to have any context key/value pairs included in-line in the top-level JSON
 // hash (care should be taken to avoid duplicate key names).  'mod' is used
 // for the module name (if any).
+//
+// If the environment variable LAGER_KEYS is set it must contain 6 key
+// names separated by commas and those become the default keys to use.
+// For example:
+//      LAGER_KEYS="timestamp,severity,message,data,,module"
 //
 // Pass in 6 empty strings to revert to logging a JSON list (array).
 func Keys(when, lev, msg, args, ctx, mod string) {
