@@ -223,7 +223,11 @@ func (b *buffer) timestamp() {
 	b.int2(int(mo))
 	b.write("-")
 	b.int2(day)
-	b.write(" ")
+	if nil == _keys {
+		b.write(" ")    // Use easier-for-humans-to-read format
+	} else {
+		b.write("T")    // Use standard format (GCP cares)
+	}
 	b.int2(now.Hour())
 	b.write(":")
 	b.int2(now.Minute())
