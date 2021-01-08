@@ -30,6 +30,22 @@ type Lager interface {
 	// not contain a fairly unique string to search for in the code.
 	CList(args ...interface{})
 
+	// If Keys() have not been set, then acts similar to List().
+	//
+	// If Keys() have been set, then acts similar to:
+	//      Map("msg", message, "args", lager.List(args...))
+	// except the "msg" and "data" keys are taken from the Keys() config.
+	//
+	// Prefer MList() or List() with a single argument over List() with
+	// multiple arguments if using log parsers that expect to always have
+	// a "message" string (such as GCP logging).  But try to avoid
+	// interpretting data into your message string as this can make
+	// structured logs less useful.
+	MList(message string, args ...interface{})
+
+	// Same as '.WithCaller(0,-1).MList(...)'.
+	CMList(message string, args ...interface{})
+
 	// Writes a single log line to Stdout in JSON format encoding a list of
 	// a UTC timestamp (string), the log level (string), and a map composed
 	// of the key/value pairs passed in.  For example:
@@ -42,6 +58,17 @@ type Lager interface {
 	// Same as '.WithCaller(0,-1).Map(...)'.  Good to use when your data does
 	// not contain a fairly unique string to search for in the code.
 	CMap(pairs ...interface{})
+
+	// The same as Map("message", message, pairs...) except instead of using
+	// the hard-coded "message" key, it uses the corresponding key configured
+	// via Keys().
+	//
+	// Prefer MMap() over Map() if using log parsers that expect to always
+	// have a "message" string (such as GCP logging).
+	MMap(message string, pairs ...interface{})
+
+	// Same as '.WithCaller(0,-1).MMap(...)'.
+	CMMap(message string, pairs ...interface{})
 
 	// Gets a new Lager that adds to each log line the key/value pairs from
 	// zero or more context.Context values.
@@ -81,8 +108,12 @@ type keyStrs struct {
 type noop struct{}  // Also used as "key" for context.Context decoration.
 func (_ noop) List(_ ...interface{}) {}
 func (_ noop) CList(_ ...interface{}) {}
+func (_ noop) MList(_ string, _ ...interface{}) {}
+func (_ noop) CMList(_ string, _ ...interface{}) {}
 func (_ noop) Map(_ ...interface{}) {}
 func (_ noop) CMap(_ ...interface{}) {}
+func (_ noop) MMap(_ string, _ ...interface{}) {}
+func (_ noop) CMMap(_ string, _ ...interface{}) {}
 func (n noop) With(_ ...Ctx) Lager { return n }
 func (n noop) WithStack(_, _, _ int) Lager { return n }
 func (n noop) WithCaller(_, _ int) Lager { return n }
@@ -290,8 +321,9 @@ func (l level) String() string {
 // Output each future log line as a JSON hash ("object") using the given keys.
 // 'when' is used for the timestamp.  'lev' is used for the log level name.
 // 'msg' is either "" or will be used when a single argument is passed to
-// List().  'args' is used for the arguments to List() when 'msg' is not.
-// 'mod' is used for the module name (if any).
+// List().  'msg' is also used for the first argument to MMap() and MList().
+// 'args' is used for the arguments to List() when 'msg' is not.  'mod' is
+// used for the module name (if any).
 //
 // 'ctx' is used for the hash context values (if any).  Specify "" for 'ctx'
 // to have any context key/value pairs included in-line in the top-level JSON
@@ -410,12 +442,55 @@ func (l *logger) List(args ...interface{}) {
 	l.end(b)
 }
 
+// Log a message string and a list of values (see the Lager interface for
+// more details).
+func (l *logger) MList(message string, args ...interface{}) {
+	b := l.start()
+	if nil == _keys {
+		if 0 < len(args) {
+			b.scalar(List(message, args))
+		} else {
+			// Put the single item in a list for sake of consistency:
+			b.scalar(List(message))
+		}
+	} else if "" != _keys.msg {
+		b.pair(_keys.msg, message)
+		if 0 < len(args) {
+			b.pair(_keys.args, args)
+		}
+	} else if 0 < len(args) {
+		b.pair(_keys.args, List(message, args))
+	} else {
+		// Put the single item in a list for sake of consistency:
+		b.pair(_keys.args, List(message))
+	}
+	l.end(b)
+}
+
 // Log a map of key/value pairs (see the Lager interface for more details).
 func (l *logger) Map(pairs ...interface{}) {
 	b := l.start()
 	if nil == _keys {
 		b.scalar(RawMap(pairs))
 	} else {
+		b.rawPairs(RawMap(pairs))
+	}
+	l.end(b)
+}
+
+// Log a message string and a map of key/value pairs (see the Lager interface
+// for more details).
+func (l *logger) MMap(message string, pairs ...interface{}) {
+	b := l.start()
+	if nil == _keys {
+		b.scalar(message)
+		b.scalar(RawMap(pairs))
+	} else {
+		key := _keys.msg
+		if "" == key {
+			key = "msg"
+		}
+		b.pair(key, message)
 		b.rawPairs(RawMap(pairs))
 	}
 	l.end(b)

@@ -61,7 +61,17 @@ func (l *logger) CList(args ...interface{}) {
 	l.WithCaller(1,-1).List(args...)
 }
 
+// Same as '.WithCaller(0,-1).MList(...)'.
+func (l *logger) CMList(message string, args ...interface{}) {
+	l.WithCaller(1,-1).MList(message, args...)
+}
+
 // Same as '.WithCaller(0,-1).Map(...)'.
 func (l *logger) CMap(args ...interface{}) {
 	l.WithCaller(1,-1).Map(args...)
+}
+
+// Same as '.WithCaller(0,-1).MMap(...)'.
+func (l *logger) CMMap(message string, args ...interface{}) {
+	l.WithCaller(1,-1).MMap(message, args...)
 }
