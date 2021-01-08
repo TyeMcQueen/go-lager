@@ -291,10 +291,11 @@ func (l level) String() string {
 // 'when' is used for the timestamp.  'lev' is used for the log level name.
 // 'msg' is either "" or will be used when a single argument is passed to
 // List().  'args' is used for the arguments to List() when 'msg' is not.
+// 'mod' is used for the module name (if any).
+//
 // 'ctx' is used for the hash context values (if any).  Specify "" for 'ctx'
 // to have any context key/value pairs included in-line in the top-level JSON
-// hash (care should be taken to avoid duplicate key names).  'mod' is used
-// for the module name (if any).
+// hash (care should be taken to avoid duplicate key names).
 //
 // If the environment variable LAGER_KEYS is set it must contain 6 key
 // names separated by commas and those become the default keys to use.

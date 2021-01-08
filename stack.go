@@ -63,5 +63,5 @@ func (l *logger) CList(args ...interface{}) {
 
 // Same as '.WithCaller(0,-1).Map(...)'.
 func (l *logger) CMap(args ...interface{}) {
-	l.WithCaller(1,-1).List(args...)
+	l.WithCaller(1,-1).Map(args...)
 }

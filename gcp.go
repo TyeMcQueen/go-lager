@@ -50,8 +50,8 @@ func GcpLevelName(lev string) string {
 // about an HTTP(S) request (and perhaps its response), if placed under the
 // key "httpRequest".
 //
-// `req` must not be `nil` but `resp` and `start` can be.  `start` will not
-// be modified; it is of type `*time.Time` only to make it simple to omit
+// `req` must not be `nil` but `resp` and `start` can be.  `*start` will not
+// be modified; `start` is of type `*time.Time` only to make it simple to omit
 // latency calculations by passing in `nil`.
 //
 // When using tracing, this allows GCP logging to display log lines for the
@@ -60,8 +60,9 @@ func GcpLevelName(lev string) string {
 // to work, you must log a final message that includes all three arguments
 // (as well as using GCP-compatible tracing).
 //
-// The following items will be logged in order, except that some can be
-// omitted depending on what you pass in.
+// The following items will be logged (in order in the original JSON, but
+// GCP does not preserve order of JSON keys, understandably), except that
+// some can be omitted depending on what you pass in.
 //
 //      "protocol"          E.g. "HTTP/1.1"
 //      "requestMethod"     E.g. "GET"
