@@ -172,9 +172,9 @@ func init() {
 	if k := os.Getenv("LAGER_KEYS"); "" != k {
 		keys := strings.Split(k, ",")
 		if 6 != len(keys) {
-			Exit().Map(
-				"LAGER_KEYS expected 6 comma-separated labels not", len(keys),
-				"Value", k,
+			Exit().MMap(
+				"LAGER_KEYS expected 6 comma-separated labels",
+				"Not", len(keys), "Value", k,
 			)
 		}
 		Keys(keys[0], keys[1], keys[2], keys[3], keys[4], keys[5])
