@@ -2,6 +2,7 @@ package lager
 
 import (
 	"fmt"
+	"net"
 	"net/http"
 	"strconv"
 	"time"
@@ -66,7 +67,7 @@ func GcpLevelName(lev string) string {
 //
 //      "protocol"          E.g. "HTTP/1.1"
 //      "requestMethod"     E.g. "GET"
-//      "requestUrl"        The original URL from the request's first line.
+//      "requestUrl"        E.g. "https://cool.me/api/v1"
 //      "status"            E.g. "403"
 //      "requestSize"       Omitted if the request body size is not yet known.
 //      "responseSize"      Omitted if `resp` is `nil` or body size not known.
@@ -79,11 +80,16 @@ func GcpHttp(req *http.Request, resp *http.Response, start *time.Time) RawMap {
 	ua := req.Header.Get("User-Agent")
 	ref := req.Header.Get("Referer")
 	reqSize := req.ContentLength
-	remoteIp := req.RemoteAddr
+
+	remoteAddr := req.RemoteAddr
+	if remoteIp, _, err := net.SplitHostPort(remoteAddr); nil == err {
+		remoteAddr = remoteIp
+	}
 	// TODO: Add support for proxy headers.
-//  if req.Header.Get("?") {
+//  if ... req.Header.Get("X-Forwarded-For") {
 //      remoteIp = ...
 //  }
+
 	status := 0
 	respSize := int64(-1)
 	if nil != resp {
@@ -94,15 +100,27 @@ func GcpHttp(req *http.Request, resp *http.Response, start *time.Time) RawMap {
 	if nil != start {
 		lag = fmt.Sprintf("%.4fs", time.Now().Sub(*start).Seconds())
 	}
+
+	uri := *req.URL
+	if "" == uri.Host {
+		uri.Host = req.Host
+	}
+	uri.Scheme = "http"
+	if fp := req.Header.Get("X-Forwarded-Proto"); "" != fp {
+		uri.Scheme = fp
+	} else if nil != req.TLS {
+		uri.Scheme = "https"
+	}
+
 	return Map(
 		"protocol",                             req.Proto,
 		"requestMethod",                        req.Method,
-		"requestUrl",                           req.RequestURI,
+		"requestUrl",                           uri.String(),
 		Unless(0 == status, "status"),          strconv.Itoa(status),
 		Unless(reqSize < 0, "requestSize"),     strconv.FormatInt(reqSize, 10),
 		Unless(respSize < 0, "responseSize"),   strconv.FormatInt(respSize, 10),
 		Unless("" == lag, "latency"),           lag,
-		"remoteIp",                             remoteIp,
+		"remoteIp",                             remoteAddr,
 	//  "serverIp",                             ?,
 		Unless("" == ref, "referer"),           ref,
 		Unless("" == ua, "userAgent"),          ua,
