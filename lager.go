@@ -98,6 +98,11 @@ type Lager interface {
 	// the file name.  A 2 would include the file name and the deepest sub-
 	// directory name.  A -1 uses the value of lager.PathParts.
 	WithCaller(depth, pathParts int) Lager
+
+	// The Println() method is provided for minimal compatibility with
+	// log.Logger, as this method is the one most used by other modules.
+	// It is just an alias for the List() method.
+	Println(...interface{})
 }
 
 type keyStrs struct {
@@ -118,6 +123,7 @@ func (n noop) With(_ ...Ctx) Lager { return n }
 func (n noop) WithStack(_, _, _ int) Lager { return n }
 func (n noop) WithCaller(_, _ int) Lager { return n }
 func (_ noop) Enabled() bool { return false }
+func (_ noop) Println(_ ...interface{}) {}
 
 type level int8
 const(
@@ -428,6 +434,9 @@ func (l *logger) end(b *buffer) {
 	case lPanic: panic("lager.Panic() logged (see above)")
 	}
 }
+
+// An alias for List() for minimal compatibility with log.Logger.
+func (l *logger) Println(args ...interface{}) { l.List(args...) }
 
 // Log a list of values (see the Lager interface for more details).
 func (l *logger) List(args ...interface{}) {
