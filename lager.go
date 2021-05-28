@@ -1,11 +1,11 @@
 package lager
 
 import(
+	"bytes"
 	"context"
 	"fmt"
 	"io"
 	"os"
-	"strconv"
 	"strings"
 )
 
@@ -196,13 +196,13 @@ func init() {
 // from "FWNAITDOG" are silently ignored.  So you can also call
 // Init("Fail Warn Note Acc Info").
 func Init(levels string) {
-	_enabledLevels = ""
 	for l := lFail; l <= lGuts; l++ {
 		_lagers[int(l)] = noop{}
 	}
 	if "" == levels {
 		levels = "FW"
 	}
+	enabled := make([]byte, 0, 9)
 	for _, c := range levels {
 		switch c {
 		case 'F': _lagers[int(lFail)]  = &logger{lev: lFail}
@@ -216,8 +216,12 @@ func Init(levels string) {
 		case 'G': _lagers[int(lGuts)]  = &logger{lev: lGuts}
 		default:  continue
 		}
-		_enabledLevels += strconv.QuoteRune(c)
+		b := byte(c)
+		if ! bytes.Contains([]byte{b}, enabled) {
+			enabled = append(enabled, b)
+		}
 	}
+	_enabledLevels = string(enabled)
 }
 
 func forLevel(lev level, cs ...Ctx) Lager {
