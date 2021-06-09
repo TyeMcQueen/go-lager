@@ -19,7 +19,7 @@ import (
 //      Note - Notice ("300")
 //      Access, Info - Info ("200")
 //      Trace, Debug, Obj, Guts - Debug ("100")
-//      Not possible (except due to bug in Lager): Default ("0")
+//      If an invalid level name is passed: Default ("0")
 //
 // If the environment variable LAGER_GCP is not empty, then
 // lager.LevelNotation will be initalized to lager.GcpLevelName.
@@ -49,9 +49,9 @@ func GcpLevelName(lev string) string {
 // about an HTTP(S) request (and perhaps its response), if placed under the
 // key "httpRequest".
 //
-// `req` must not be `nil` but `resp` and `start` can be.  `*start` will not
-// be modified; `start` is of type `*time.Time` only to make it simple to omit
-// latency calculations by passing in `nil`.
+// 'req' must not be 'nil' but 'resp' and 'start' can be.  '*start' will not
+// be modified; 'start' is of type '*time.Time' only to make it simple to omit
+// latency calculations by passing in 'nil'.
 //
 // When using tracing, this allows GCP logging to display log lines for the
 // same request (if each includes this block) together.  So this can be a
@@ -68,8 +68,8 @@ func GcpLevelName(lev string) string {
 //      "requestUrl"        E.g. "https://cool.me/api/v1"
 //      "status"            E.g. "403"
 //      "requestSize"       Omitted if the request body size is not yet known.
-//      "responseSize"      Omitted if `resp` is `nil` or body size not known.
-//      "latency"           E.g. "0.1270s".  Omitted if `start` is `nil`.
+//      "responseSize"      Omitted if 'resp' is 'nil' or body size not known.
+//      "latency"           E.g. "0.1270s".  Omitted if 'start' is 'nil'.
 //      "remoteIp"          E.g. "127.0.0.1"
 //      "serverIp"          Not currently ever included.
 //      "referer"           Omitted if there is no Referer[sic] header.

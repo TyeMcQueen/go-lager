@@ -366,7 +366,10 @@ func (l level) String() string {
 //
 // 'ctx' is used for the hash context values (if any).  Specify "" for 'ctx'
 // to have any context key/value pairs included in-line in the top-level JSON
-// hash (care should be taken to avoid duplicate key names).
+// hash.  In this case, care should be taken to avoid using the same key name
+// both in a context pair and in a pair being passed to, for example, MMap().
+// If you do that, both pairs will be output but anything parsing the log
+// line will only record one of the pairs.
 //
 // If the environment variable LAGER_KEYS is set it must contain 6 key
 // names separated by commas and those become the default keys to use.
