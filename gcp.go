@@ -130,7 +130,8 @@ func GcpHttp(req *http.Request, resp *http.Response, start *time.Time) RawMap {
 // be quite useful], then you can get even more efficiency by adding the pair
 // ' "httpRequest", GcpHttp(req, nil, nil) ' to your Context [which you then
 // pass to 'lager.Warn(ctx)', for example] so the data is only calculated
-// once.
+// once.  You can add this to an *http.Request's Context by calling
+// GcpRequestAddTrace().
 //
 // For this to work best, you should specify "" as the key name for context
 // information; which is automatically done if LAGER_GCP is non-empty in the
@@ -171,4 +172,13 @@ func GcpLogAccess(
 ) Lager {
 	return Acc(
 		AddPairs(req.Context(), "httpRequest", GcpHttp(req, resp, pStart)))
+}
+
+// GcpRequestAddTrace() takes an '*http.Request' and returns one back that
+// now has its context decorated with an "httpRequest" pair to be logged.
+//
+func GcpRequestAddTrace(req *http.Request) *http.Request {
+	ctx := req.Context()
+	ctx = AddPairs(ctx, "httpRequest", GcpHttp(req, nil, nil))
+	return req.WithContext(ctx)
 }
