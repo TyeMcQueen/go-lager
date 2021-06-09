@@ -1,8 +1,11 @@
 package lager
 
 import (
+	"context"
 	"fmt"
+	"io"
 	"net/http"
+	"os"
 	"time"
 )
 
@@ -165,7 +168,8 @@ func GcpHttpF(
 //
 // You would use it like, for example:
 //
-//      lager.GcpLogAccess(req, resp, &start).List("Response sent")
+//      lager.GcpLogAccess(req, resp, &start).MMap(
+//          "Response sent", "User", userID)
 //
 func GcpLogAccess(
 	req *http.Request, resp *http.Response, pStart *time.Time,
@@ -181,4 +185,41 @@ func GcpRequestAddTrace(req *http.Request) *http.Request {
 	ctx := req.Context()
 	ctx = AddPairs(ctx, "httpRequest", GcpHttp(req, nil, nil))
 	return req.WithContext(ctx)
+}
+
+const projIdUrl =
+	"http://metadata.google.internal/computeMetadata/v1/project/project-id"
+var projectID string
+
+// GcpProjectID() returns the current GCP project ID [which is not the
+// project number].  Once the lookup succeeds, that value is saved and
+// returned for subsequent calls.  The lookup times out after 0.1s.
+//
+// Set GCP_PROJECT_ID in your environment to avoid the more complex lookup.
+//
+func GcpProjectID(ctx Ctx) (string, error) {
+	if "" == projectID {
+		projectID = os.Getenv("GCP_PROJECT_ID")
+	}
+	if "" == projectID {
+		reqCtx, can := context.WithTimeout(ctx, 100*time.Millisecond)
+		defer can()
+		req, err := http.NewRequestWithContext(reqCtx, "GET", projIdUrl, nil)
+		if nil != err {
+			return "", fmt.Errorf("GcpProjectID() is broken: %w", err)
+		}
+		req.Header.Set("Metadata-Flavor", "Google")
+		resp, err := new(http.Client).Do(req)
+		if nil != err {
+			return "", fmt.Errorf("Can't get GCP project ID (from %s): %w",
+				projIdUrl, err)
+		}
+		b, err := io.ReadAll(resp.Body)
+		if nil != err {
+			return "", fmt.Errorf(
+				"Can't read GCP project ID from response body: %w", err)
+		}
+		projectID = string(b)
+	}
+	return projectID, nil
 }
