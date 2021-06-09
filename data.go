@@ -62,8 +62,8 @@ func Pairs(pairs ...interface{}) AMap {
 }
 
 // Unless() is used to pass an optional label+value pair to Map().  Use
-// Unless() to specify the label and, if the value is unsafe to compute, then
-// wrap it in a deferring function:
+// Unless() to specify the label and, if the value is unsafe or expensive to
+// compute, then wrap it in a deferring function:
 //
 //      lager.Debug().Map(
 //          "Ran", stage,
