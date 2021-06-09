@@ -73,6 +73,8 @@ func GcpLevelName(lev string) string {
 //      "referer"           Omitted if there is no Referer[sic] header.
 //      "userAgent"         Omitted if there is no User-Agent header.
 //
+// See also GcpHttpF().
+//
 func GcpHttp(req *http.Request, resp *http.Response, start *time.Time) RawMap {
 	ua := req.Header.Get("User-Agent")
 	ref := req.Header.Get("Referer")
@@ -119,4 +121,54 @@ func GcpHttp(req *http.Request, resp *http.Response, start *time.Time) RawMap {
 		Unless("" == ref, "referer"), ref,
 		Unless("" == ua, "userAgent"), ua,
 	)
+}
+
+// GcpHttpF() can be used for logging just like GcpHttp(), it just returns a
+// function so that the work is only performed if the logging level is enabled.
+//
+// If you are including GcpHttp() information in a lot of log lines [which can
+// be quite useful], then you can get even more efficiency by adding the pair
+// ' "httpRequest", GcpHttp(req, nil, nil) ' to your Context [which you then
+// pass to 'lager.Warn(ctx)', for example] so the data is only calculated
+// once.
+//
+// For this to work best, you should specify "" as the key name for context
+// information; which is automatically done if LAGER_GCP is non-empty in the
+// environment and LAGER_KEYS is not set.
+//
+// You'll likely include 'GcpHttp(req, resp, &start)' in one log line [to
+// record the response information and latency, not just the request].  If
+// you added "httpRequest" to your context, then that logging is best done
+// via:
+//
+//      lager.Acc(
+//          lager.AddPairs(ctx, "httpRequest", GcpHttp(req, resp, &start)),
+//      ).List("Response sent")
+//
+// so that the request-only information is not also output.  GcpLogAccess()
+// makes this easy.
+//
+func GcpHttpF(
+	req *http.Request, resp *http.Response, start *time.Time,
+) (func() interface{}) {
+	return func() interface{} {
+		return GcpHttp(req, resp, start)
+	}
+}
+
+// GcpLogAccess() is just a handy shortcut for:
+//
+//      lager.Acc(
+//          lager.AddPairs(req.Context(),
+//              "httpRequest", GcpHttp(req, resp, pStart)))
+//
+// You would use it like, for example:
+//
+//      lager.GcpLogAccess(req, resp, &start).List("Response sent")
+//
+func GcpLogAccess(
+	req *http.Request, resp *http.Response, pStart *time.Time,
+) Lager {
+	return Acc(
+		AddPairs(req.Context(), "httpRequest", GcpHttp(req, resp, pStart)))
 }
