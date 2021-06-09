@@ -2,9 +2,7 @@ package lager
 
 import (
 	"fmt"
-	"net"
 	"net/http"
-	"strconv"
 	"time"
 )
 
@@ -63,26 +61,24 @@ func GcpLevelName(lev string) string {
 // GCP does not preserve order of JSON keys, understandably), except that
 // some can be omitted depending on what you pass in.
 //
-//      "protocol"          E.g. "HTTP/1.1"
 //      "requestMethod"     E.g. "GET"
 //      "requestUrl"        E.g. "https://cool.me/api/v1"
-//      "status"            E.g. "403"
+//      "protocol"          E.g. "HTTP/1.1"
+//      "status"            E.g. 403
 //      "requestSize"       Omitted if the request body size is not yet known.
 //      "responseSize"      Omitted if 'resp' is 'nil' or body size not known.
 //      "latency"           E.g. "0.1270s".  Omitted if 'start' is 'nil'.
-//      "remoteIp"          E.g. "127.0.0.1"
+//      "remoteIp"          Client IP plus port, e.g. "127.0.0.1:12345"
 //      "serverIp"          Not currently ever included.
 //      "referer"           Omitted if there is no Referer[sic] header.
 //      "userAgent"         Omitted if there is no User-Agent header.
+//
 func GcpHttp(req *http.Request, resp *http.Response, start *time.Time) RawMap {
 	ua := req.Header.Get("User-Agent")
 	ref := req.Header.Get("Referer")
 	reqSize := req.ContentLength
 
 	remoteAddr := req.RemoteAddr
-	if remoteIp, _, err := net.SplitHostPort(remoteAddr); nil == err {
-		remoteAddr = remoteIp
-	}
 	// TODO: Add support for proxy headers.
 	//  if ... req.Header.Get("X-Forwarded-For") {
 	//      remoteIp = ...
@@ -111,12 +107,12 @@ func GcpHttp(req *http.Request, resp *http.Response, start *time.Time) RawMap {
 	}
 
 	return Map(
-		"protocol", req.Proto,
 		"requestMethod", req.Method,
 		"requestUrl", uri.String(),
-		Unless(0 == status, "status"), strconv.Itoa(status),
-		Unless(reqSize < 0, "requestSize"), strconv.FormatInt(reqSize, 10),
-		Unless(respSize < 0, "responseSize"), strconv.FormatInt(respSize, 10),
+		"protocol", req.Proto,
+		Unless(0 == status, "status"), status,
+		Unless(reqSize < 0, "requestSize"), reqSize,
+		Unless(respSize < 0, "responseSize"), respSize,
 		Unless("" == lag, "latency"), lag,
 		"remoteIp", remoteAddr,
 		// "serverIp", ?,
