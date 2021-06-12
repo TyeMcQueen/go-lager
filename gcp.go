@@ -30,7 +30,7 @@ import (
 //
 func GcpLevelName(lev string) string {
 	switch lev[0] {
-	case 'P': case 'E':
+	case 'P', 'E':
 		// We could import "cloud.google.com/go/logging" to get these
 		// constants, but that pulls in hundreds of dependencies which
 		// is not a reasonable trade-off for getting 7 constants.
@@ -41,9 +41,9 @@ func GcpLevelName(lev string) string {
 		return "400"
 	case 'N':
 		return "300"
-	case 'A': case 'I':
+	case 'A', 'I':
 		return "200"
-	case 'T': case 'D': case 'O': case 'G':
+	case 'T', 'D', 'O', 'G':
 		return "100"
 	}
 	return "0"
