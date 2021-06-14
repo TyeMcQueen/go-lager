@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"os"
 	"strconv"
@@ -73,7 +74,7 @@ func GcpLevelName(lev string) string {
 //      "requestSize"       Omitted if the request body size is not yet known.
 //      "responseSize"      Omitted if 'resp' is 'nil' or body size not known.
 //      "latency"           E.g. "0.1270s".  Omitted if 'start' is 'nil'.
-//      "remoteIp"          Client IP plus port, e.g. "127.0.0.1:12345"
+//      "remoteIp"          E.g. "127.0.0.1"
 //      "serverIp"          Not currently ever included.
 //      "referer"           Omitted if there is no Referer[sic] header.
 //      "userAgent"         Omitted if there is no User-Agent header.
@@ -86,6 +87,9 @@ func GcpHttp(req *http.Request, resp *http.Response, start *time.Time) RawMap {
 	reqSize := req.ContentLength
 
 	remoteAddr := req.RemoteAddr
+	if remoteIp, _, err := net.SplitHostPort(remoteAddr); nil == err {
+		remoteAddr = remoteIp
+	}
 	// TODO: Add support for proxy headers.
 	//  if ... req.Header.Get("X-Forwarded-For") {
 	//      remoteIp = ...
