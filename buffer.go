@@ -240,7 +240,7 @@ func (b *buffer) timestamp() {
 	b.write(":")
 	b.int2(now.Second())
 	b.write(".")
-	b.int(now.Nanosecond()/1000000, 3)
+	b.int(now.Nanosecond()/100000, 4)
 	b.write(`Z"`)
 	b.delim = comma
 }
