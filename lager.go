@@ -180,7 +180,7 @@ func init() {
 	Init(os.Getenv("LAGER_LEVELS"))
 
 	if "" != os.Getenv("LAGER_GCP") {
-		Keys("timestamp", "severity", "message", "data", "", "module")
+		Keys("time", "severity", "message", "data", "", "module")
 		LevelNotation = GcpLevelName
 	}
 	if k := os.Getenv("LAGER_KEYS"); "" != k {
@@ -375,7 +375,7 @@ func (l level) String() string {
 // names separated by commas and those become the default keys to use.
 // Otherwise, if the environment variable LAGER_GCP is not empty, then
 // it is as if you had the following set (among other changes):
-//      LAGER_KEYS="timestamp,severity,message,data,,module"
+//      LAGER_KEYS="time,severity,message,data,,module"
 //
 // Pass in 6 empty strings to revert to logging a JSON list (array).
 func Keys(when, lev, msg, args, ctx, mod string) {

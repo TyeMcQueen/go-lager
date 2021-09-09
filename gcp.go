@@ -12,6 +12,9 @@ import (
 	"time"
 )
 
+const GcpSpanKey = "logging.googleapis.com/spanId"
+const GcpTraceKey = "logging.googleapis.com/trace"
+
 // GcpLevelName takes a Lager level name (only the first letter matters and
 // it must be upper case) and returns the corresponding value GCP uses in
 // structured logging to represent the severity of such logs.  Levels are
@@ -263,8 +266,8 @@ func GcpContextAddTrace(
 		project = id
 	}
 	ctx = AddPairs(ctx,
-		"trace",  "projects/" + project + "/traces/" + traceID,
-		"spanId", strconv.FormatUint(spanID, 10),
+		GcpTraceKey, "projects/" + project + "/traces/" + traceID,
+		GcpSpanKey,  strconv.FormatUint(spanID, 16),
 	)
 	return ctx, nil
 }
