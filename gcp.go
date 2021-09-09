@@ -79,6 +79,11 @@ func GcpLevelName(lev string) string {
 //      "referer"           Omitted if there is no Referer[sic] header.
 //      "userAgent"         Omitted if there is no User-Agent header.
 //
+// Note that "status" is logged as "0" in the special case where 'resp' is
+// 'nil' but 'start' is not 'nil'.  This allows you to make an "access log"
+// entry for cases where you got an error that prevents you from either
+// making or getting an http.Response.
+//
 // See also GcpHttpF().
 //
 func GcpHttp(req *http.Request, resp *http.Response, start *time.Time) RawMap {
@@ -95,11 +100,13 @@ func GcpHttp(req *http.Request, resp *http.Response, start *time.Time) RawMap {
 	//      remoteIp = ...
 	//  }
 
-	status := 0
+	status := -1
 	respSize := int64(-1)
 	if nil != resp {
 		status = resp.StatusCode
 		respSize = resp.ContentLength
+	} else if nil != start {
+		status = 0
 	}
 	lag := ""
 	if nil != start {
@@ -121,7 +128,7 @@ func GcpHttp(req *http.Request, resp *http.Response, start *time.Time) RawMap {
 		"requestMethod", req.Method,
 		"requestUrl", uri.String(),
 		"protocol", req.Proto,
-		Unless(0 == status, "status"), status,
+		Unless(-1 == status, "status"), status,
 		Unless(reqSize < 0, "requestSize"), reqSize,
 		Unless(respSize < 0, "responseSize"), respSize,
 		Unless("" == lag, "latency"), lag,
