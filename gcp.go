@@ -56,9 +56,9 @@ func GcpLevelName(lev string) string {
 // about an HTTP(S) request (and perhaps its response), if placed under the
 // key "httpRequest".
 //
-// 'req' must not be 'nil' but 'resp' and 'start' can be.  '*start' will not
-// be modified; 'start' is of type '*time.Time' only to make it simple to omit
-// latency calculations by passing in 'nil'.
+// 'req' must not be 'nil' but 'resp' and 'start' can be.  None of the
+// arguments passed will be modified; 'start' is of type '*time.Time' only
+// to make it simple to omit latency calculations by passing in 'nil'.
 //
 // When using tracing, this allows GCP logging to display log lines for the
 // same request (if each includes this block) together.  So this can be a
@@ -87,7 +87,7 @@ func GcpLevelName(lev string) string {
 // entry for cases where you got an error that prevents you from either
 // making or getting an http.Response.
 //
-// See also GcpHttpF().
+// See also GcpHttpF() and GcpRequestAddTrace().
 //
 func GcpHttp(req *http.Request, resp *http.Response, start *time.Time) RawMap {
 	ua := req.Header.Get("User-Agent")
@@ -98,7 +98,7 @@ func GcpHttp(req *http.Request, resp *http.Response, start *time.Time) RawMap {
 	if remoteIp, _, err := net.SplitHostPort(remoteAddr); nil == err {
 		remoteAddr = remoteIp
 	}
-	// TODO: Add support for proxy headers.
+	// TODO: Add support for proxy headers?
 	//  if ... req.Header.Get("X-Forwarded-For") {
 	//      remoteIp = ...
 	//  }
@@ -165,8 +165,8 @@ func GcpHttp(req *http.Request, resp *http.Response, start *time.Time) RawMap {
 //          lager.AddPairs(ctx, "httpRequest", GcpHttp(req, resp, &start)),
 //      ).List("Response sent")
 //
-// so that the request-only information is not also output.  GcpLogAccess()
-// makes this easy.
+// so that the request-only information is not also output.  Doing this via
+// GcpLogAccess() is easier.
 //
 func GcpHttpF(
 	req *http.Request, resp *http.Response, start *time.Time,
@@ -176,7 +176,8 @@ func GcpHttpF(
 	}
 }
 
-// GcpLogAccess() is just a handy shortcut for:
+// GcpLogAccess() creates a standard "access log" entry.  It is just a handy
+// shortcut for:
 //
 //      lager.Acc(
 //          lager.AddPairs(req.Context(),
@@ -186,6 +187,9 @@ func GcpHttpF(
 //
 //      lager.GcpLogAccess(req, resp, &start).MMap(
 //          "Response sent", "User", userID)
+//
+// In a future release, GcpLogAccess() will also register the Cloud Trace
+// span noted in the 'req.Header', if any.
 //
 func GcpLogAccess(
 	req *http.Request, resp *http.Response, pStart *time.Time,
@@ -201,6 +205,9 @@ const traceHeader = "X-Cloud-Trace-Context"
 // returns them.  If the header value is not as expected, then an error is
 // returned.  If the header is simply not present, then all zero values are
 // returned.
+//
+// You may just want to use GcpRequestAddTrace() rather than calling
+// GcpTraceFromHeader() directly yourself.
 //
 func GcpTraceFromHeader(
 	head http.Header,
@@ -228,6 +235,9 @@ func GcpTraceFromHeader(
 
 // GcpSetTraceHeader() adds/sets the X-Cloud-Trace-Context header.
 //
+// You may just want to use GcpRequestAddTrace() rather than calling
+// GcpSetTraceHeader() directly yourself.
+//
 func GcpSetTraceHeader(head http.Header, traceID string, spanID uint64) {
 	head.Set(traceHeader, traceID + "/" + strconv.FormatUint(spanID, 10))
 }
@@ -240,6 +250,9 @@ func GcpSetTraceHeader(head http.Header, traceID string, spanID uint64) {
 // should be a string of 32 hexadecimal characters.  'spanID' should not be
 // 0.  'project' should be the current GCP Project ID or "" to have that
 // looked up for you.
+//
+// You may just want to use GcpRequestAddTrace() rather than calling
+// GcpContextAddTrace() directly yourself.
 //
 func GcpContextAddTrace(
 	ctx Ctx, traceID string, spanID uint64, project string,
@@ -274,7 +287,7 @@ func GcpContextAddTrace(
 
 // GcpRequestAddTrace() takes an '*http.Request' and returns one back that
 // now has its context decorated with an "httpRequest" pair to be logged
-// and perhaps also "trace" and "spanId" pairs.
+// and perhaps also pairs containing trace and span IDs.
 //
 // If 'traceID' and 'spanID' are both zero values, then GcpTraceFromHeader()
 // is called to get those.
@@ -285,6 +298,10 @@ func GcpContextAddTrace(
 //
 // Any errors are logged via 'lager.Warn(ctx)' [using the context with the
 // "httpRequest" pair added].
+//
+// In a future release, GcpRequestAddTrace() will create a new span ID
+// and arrange for that span ID to be registered as a child span when
+// GcpLogAccess() is called.
 //
 func GcpRequestAddTrace(
 	req *http.Request, traceID string, spanID uint64, project string,
