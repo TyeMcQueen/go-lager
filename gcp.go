@@ -3,7 +3,7 @@ package lager
 import (
 	"context"
 	"fmt"
-	"io"
+	"io/ioutil"
 	"net"
 	"net/http"
 	"os"
@@ -343,7 +343,7 @@ func GcpProjectID(ctx Ctx) (string, error) {
 			return "", fmt.Errorf("Can't get GCP project ID (from %s): %w",
 				projIdUrl, err)
 		}
-		b, err := io.ReadAll(resp.Body)
+		b, err := ioutil.ReadAll(resp.Body)
 		if nil != err {
 			return "", fmt.Errorf(
 				"Can't read GCP project ID from response body: %w", err)
