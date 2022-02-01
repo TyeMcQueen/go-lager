@@ -285,6 +285,45 @@ func GcpContextAddTrace(
 	return ctx, nil
 }
 
+// GcpRequestContextAddTrace() does the same as GcpRequestAddTrace()
+// except it accepts and returns the context separately, expecting the
+// caller to call req.WithContext(ctx) when they have finished adding
+// things to the context.  This can reduce the number of times that the
+// http.Request must be cloned.
+//
+func GcpRequestContextAddTrace(
+	req *http.Request,
+	ctx context.Context,
+	traceID string,
+	spanID uint64,
+	project string,
+) context.Context {
+	var err error
+	ctx = AddPairs(ctx, "httpRequest", GcpHttp(req, nil, nil))
+	if "" == traceID && 0 == spanID {
+		traceID, spanID, err = GcpTraceFromHeader(req.Header)
+		if nil == err && "" == traceID {
+			return ctx
+		}
+	} else if "" == traceID {
+		err = fmt.Errorf("GcpRequest[Context]AddTrace() called with" +
+			" empty traceID but non-zero spanID")
+	} else if 0 == spanID {
+		err = fmt.Errorf("GcpRequest[Context]AddTrace() called with" +
+			" non-empty traceID but zero spanID")
+	}
+	if "" == project && nil == err {
+		project, err = GcpProjectID(ctx)
+	}
+	if nil == err {
+		ctx, err = GcpContextAddTrace(ctx, traceID, spanID, project)
+	}
+	if nil != err {
+		Warn(ctx).List(err)
+	}
+	return ctx
+}
+
 // GcpRequestAddTrace() takes an '*http.Request' and returns one back that
 // now has its context decorated with an "httpRequest" pair to be logged
 // and perhaps also pairs containing trace and span IDs.
@@ -303,33 +342,13 @@ func GcpContextAddTrace(
 // and arrange for that span ID to be registered as a child span when
 // GcpLogAccess() is called.
 //
+// See also GcpRequestContextAddTrace().
+//
 func GcpRequestAddTrace(
 	req *http.Request, traceID string, spanID uint64, project string,
 ) *http.Request {
-	var err error
-	ctx := req.Context()
-	ctx = AddPairs(ctx, "httpRequest", GcpHttp(req, nil, nil))
-	if "" == traceID && 0 == spanID {
-		traceID, spanID, err = GcpTraceFromHeader(req.Header)
-		if nil == err && "" == traceID {
-			return req.WithContext(ctx)
-		}
-	} else if "" == traceID {
-		err = fmt.Errorf("GcpRequestAddTrace() called with" +
-			" empty traceID but non-zero spanID")
-	} else if 0 == spanID {
-		err = fmt.Errorf("GcpRequestAddTrace() called with" +
-			" non-empty traceID but zero spanID")
-	}
-	if "" == project && nil == err {
-		project, err = GcpProjectID(ctx)
-	}
-	if nil == err {
-		ctx, err = GcpContextAddTrace(ctx, traceID, spanID, project)
-	}
-	if nil != err {
-		Warn(ctx).List(err)
-	}
+	ctx := GcpRequestContextAddTrace(
+		req, req.Context(), traceID, spanID, project)
 	return req.WithContext(ctx)
 }
 
