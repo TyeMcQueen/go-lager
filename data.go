@@ -1,19 +1,18 @@
 package lager
 
-import(
+import (
 	"context"
 	"fmt"
 )
 
-
 type skipThisPair string
-var SkipThisPair = skipThisPair("")
 
+var SkipThisPair = skipThisPair("")
 
 // Storage for an ordered list of key/value pairs (without duplicate keys).
 type KVPairs struct {
-	keys    []string
-	vals    []interface{}
+	keys []string
+	vals []interface{}
 }
 
 // A list type that we efficiently convert to JSON.
@@ -25,14 +24,15 @@ type RawMap []interface{}
 // A processed list of key/value pairs we can efficiently convert to JSON.
 type AMap = *KVPairs
 
-
 // Converts an arbitrary value to a string.  Very similar to
 // fmt.Sprintf("%v",arg) but treats []byte values the same as strings
 // rather then dumping them as a list of byte values in base 10.
 func S(arg interface{}) string {
 	switch v := arg.(type) {
-	case string: return v
-	case []byte: return string(v)
+	case string:
+		return v
+	case []byte:
+		return string(v)
 	}
 	return fmt.Sprintf("%v", arg)
 }
@@ -75,7 +75,7 @@ func Pairs(pairs ...interface{}) AMap {
 //      )
 //
 func Unless(cond bool, label string) interface{} {
-	if ! cond {
+	if !cond {
 		return label
 	}
 	return SkipThisPair
@@ -156,7 +156,7 @@ func (p AMap) AddPairs(pairs ...interface{}) AMap {
 	if 0 == n {
 		return p
 	}
-	n = (n+1)/2
+	n = (n + 1) / 2
 
 	m := 0
 	if nil != p {

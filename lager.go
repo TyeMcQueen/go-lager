@@ -1,6 +1,6 @@
 package lager
 
-import(
+import (
 	"bytes"
 	"context"
 	"fmt"
@@ -8,7 +8,6 @@ import(
 	"os"
 	"strings"
 )
-
 
 // TYPES //
 
@@ -110,35 +109,44 @@ type keyStrs struct {
 }
 
 // A stub Lager that outputs nothing:
-type noop struct{}  // Also used as "key" for context.Context decoration.
-func (_ noop) List(_ ...interface{}) {}
-func (_ noop) CList(_ ...interface{}) {}
-func (_ noop) MList(_ string, _ ...interface{}) {}
+type noop struct{}                               // Also used as "key" for context.Context decoration.
+func (_ noop) List(_ ...interface{})             {}
+func (_ noop) CList(_ ...interface{})            {}
+func (_ noop) MList(_ string, _ ...interface{})  {}
 func (_ noop) CMList(_ string, _ ...interface{}) {}
-func (_ noop) Map(_ ...interface{}) {}
-func (_ noop) CMap(_ ...interface{}) {}
-func (_ noop) MMap(_ string, _ ...interface{}) {}
-func (_ noop) CMMap(_ string, _ ...interface{}) {}
-func (n noop) With(_ ...Ctx) Lager { return n }
-func (n noop) WithStack(_, _, _ int) Lager { return n }
-func (n noop) WithCaller(_, _ int) Lager { return n }
-func (_ noop) Enabled() bool { return false }
-func (_ noop) Println(_ ...interface{}) {}
+func (_ noop) Map(_ ...interface{})              {}
+func (_ noop) CMap(_ ...interface{})             {}
+func (_ noop) MMap(_ string, _ ...interface{})   {}
+func (_ noop) CMMap(_ string, _ ...interface{})  {}
+func (n noop) With(_ ...Ctx) Lager               { return n }
+func (n noop) WithStack(_, _, _ int) Lager       { return n }
+func (n noop) WithCaller(_, _ int) Lager         { return n }
+func (_ noop) Enabled() bool                     { return false }
+func (_ noop) Println(_ ...interface{})          {}
 
 type level int8
-const(
+
+const (
 	lPanic level = iota
-	lExit; lFail; lWarn; lNote; lAcc; lInfo; lTrace; lDebug; lObj; lGuts
+	lExit
+	lFail
+	lWarn
+	lNote
+	lAcc
+	lInfo
+	lTrace
+	lDebug
+	lObj
+	lGuts
 	nLevels
 )
 
 // A Lager that actually logs.
 type logger struct {
-	lev level       // Log level
-	kvp AMap        // Extra key/value pairs to append to each log line.
-	mod string      // The module name where the log level is en/disabled.
+	lev level  // Log level
+	kvp AMap   // Extra key/value pairs to append to each log line.
+	mod string // The module name where the log level is en/disabled.
 }
-
 
 // GLOBALS //
 
@@ -205,19 +213,29 @@ func Init(levels string) {
 	enabled := make([]byte, 0, 9)
 	for _, c := range levels {
 		switch c {
-		case 'F': _lagers[int(lFail)]  = &logger{lev: lFail}
-		case 'W': _lagers[int(lWarn)]  = &logger{lev: lWarn}
-		case 'N': _lagers[int(lNote)]  = &logger{lev: lNote}
-		case 'A': _lagers[int(lAcc)]   = &logger{lev: lAcc}
-		case 'I': _lagers[int(lInfo)]  = &logger{lev: lInfo}
-		case 'T': _lagers[int(lTrace)] = &logger{lev: lTrace}
-		case 'D': _lagers[int(lDebug)] = &logger{lev: lDebug}
-		case 'O': _lagers[int(lObj)]   = &logger{lev: lObj}
-		case 'G': _lagers[int(lGuts)]  = &logger{lev: lGuts}
-		default:  continue
+		case 'F':
+			_lagers[int(lFail)] = &logger{lev: lFail}
+		case 'W':
+			_lagers[int(lWarn)] = &logger{lev: lWarn}
+		case 'N':
+			_lagers[int(lNote)] = &logger{lev: lNote}
+		case 'A':
+			_lagers[int(lAcc)] = &logger{lev: lAcc}
+		case 'I':
+			_lagers[int(lInfo)] = &logger{lev: lInfo}
+		case 'T':
+			_lagers[int(lTrace)] = &logger{lev: lTrace}
+		case 'D':
+			_lagers[int(lDebug)] = &logger{lev: lDebug}
+		case 'O':
+			_lagers[int(lObj)] = &logger{lev: lObj}
+		case 'G':
+			_lagers[int(lGuts)] = &logger{lev: lGuts}
+		default:
+			continue
 		}
 		b := byte(c)
-		if ! bytes.Contains([]byte{b}, enabled) {
+		if !bytes.Contains([]byte{b}, enabled) {
 			enabled = append(enabled, b)
 		}
 	}
@@ -290,17 +308,28 @@ func Guts(cs ...Ctx) Lager { return forLevel(lGuts, cs...) }
 // logs or doesn't, depending on whether the specified log level is enabled.
 func Level(lev byte, cs ...Ctx) Lager {
 	switch lev {
-	case 'P': return forLevel(lPanic, cs...)
-	case 'E': return forLevel(lExit, cs...)
-	case 'F': return forLevel(lFail, cs...)
-	case 'W': return forLevel(lWarn, cs...)
-	case 'N': return forLevel(lNote, cs...)
-	case 'A': return forLevel(lAcc, cs...)
-	case 'I': return forLevel(lInfo, cs...)
-	case 'T': return forLevel(lTrace, cs...)
-	case 'D': return forLevel(lDebug, cs...)
-	case 'O': return forLevel(lObj, cs...)
-	case 'G': return forLevel(lGuts, cs...)
+	case 'P':
+		return forLevel(lPanic, cs...)
+	case 'E':
+		return forLevel(lExit, cs...)
+	case 'F':
+		return forLevel(lFail, cs...)
+	case 'W':
+		return forLevel(lWarn, cs...)
+	case 'N':
+		return forLevel(lNote, cs...)
+	case 'A':
+		return forLevel(lAcc, cs...)
+	case 'I':
+		return forLevel(lInfo, cs...)
+	case 'T':
+		return forLevel(lTrace, cs...)
+	case 'D':
+		return forLevel(lDebug, cs...)
+	case 'O':
+		return forLevel(lObj, cs...)
+	case 'G':
+		return forLevel(lGuts, cs...)
 	}
 	panic(fmt.Sprintf(
 		"Level() must be one char from \"PEFWNAITDOG\" not %q", lev))
@@ -347,12 +376,12 @@ func (l level) String() string {
 //
 // Pass in 6 empty strings to revert to logging a JSON list (array).
 func Keys(when, lev, msg, args, ctx, mod string) {
-	if  "" == when && "" == lev && "" == args && "" == mod &&
+	if "" == when && "" == lev && "" == args && "" == mod &&
 		"" == ctx && "" == msg {
 		_keys = nil
 		return
 	} else if "" == when || "" == lev || "" == args || "" == mod {
-		Exit().WithCaller(1,-1).List("Only keys for msg and ctx can be blank")
+		Exit().WithCaller(1, -1).List("Only keys for msg and ctx can be blank")
 	}
 	_keys = &keyStrs{
 		when: when, lev: lev, msg: msg, args: args, ctx: ctx, mod: mod,
@@ -423,9 +452,9 @@ func (l *logger) end(b *buffer) {
 		}
 	}
 
-	if nil == _keys {   // [
+	if nil == _keys { // [
 		b.close("]\n")
-	} else {            // {
+	} else { // {
 		b.close("}\n")
 	}
 
@@ -434,8 +463,10 @@ func (l *logger) end(b *buffer) {
 	bufPool.Put(b)
 
 	switch l.lev {
-	case lExit:  os.Exit(1)
-	case lPanic: panic("lager.Panic() logged (see above)")
+	case lExit:
+		os.Exit(1)
+	case lPanic:
+		panic("lager.Panic() logged (see above)")
 	}
 }
 

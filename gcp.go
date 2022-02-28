@@ -8,7 +8,6 @@ import (
 	"time"
 )
 
-
 // GcpLevelName takes a Lager level name (only the first letter matters and
 // it must be upper case) and returns the corresponding value GCP uses in
 // structured logging to represent the severity of such logs.  Levels are
@@ -27,7 +26,7 @@ import (
 //
 func GcpLevelName(lev string) string {
 	switch lev[0] {
-	case 'P': case 'E':
+	case 'P', 'E':
 		// We could import "cloud.google.com/go/logging" to get these
 		// constants, but that pulls in hundreds of dependencies which
 		// is not a reasonable trade-off for getting 7 constants.
@@ -38,14 +37,13 @@ func GcpLevelName(lev string) string {
 		return "400"
 	case 'N':
 		return "300"
-	case 'A': case 'I':
+	case 'A', 'I':
 		return "200"
-	case 'T': case 'D': case 'O': case 'G':
+	case 'T', 'D', 'O', 'G':
 		return "100"
 	}
 	return "0"
 }
-
 
 // GcpHtttp() returns a value for logging that GCP will recognize as details
 // about an HTTP(S) request (and perhaps its response), if placed under the
@@ -86,9 +84,9 @@ func GcpHttp(req *http.Request, resp *http.Response, start *time.Time) RawMap {
 		remoteAddr = remoteIp
 	}
 	// TODO: Add support for proxy headers.
-//  if ... req.Header.Get("X-Forwarded-For") {
-//      remoteIp = ...
-//  }
+	//  if ... req.Header.Get("X-Forwarded-For") {
+	//      remoteIp = ...
+	//  }
 
 	status := 0
 	respSize := int64(-1)
@@ -113,16 +111,16 @@ func GcpHttp(req *http.Request, resp *http.Response, start *time.Time) RawMap {
 	}
 
 	return Map(
-		"protocol",                             req.Proto,
-		"requestMethod",                        req.Method,
-		"requestUrl",                           uri.String(),
-		Unless(0 == status, "status"),          strconv.Itoa(status),
-		Unless(reqSize < 0, "requestSize"),     strconv.FormatInt(reqSize, 10),
-		Unless(respSize < 0, "responseSize"),   strconv.FormatInt(respSize, 10),
-		Unless("" == lag, "latency"),           lag,
-		"remoteIp",                             remoteAddr,
-	//  "serverIp",                             ?,
-		Unless("" == ref, "referer"),           ref,
-		Unless("" == ua, "userAgent"),          ua,
+		"protocol", req.Proto,
+		"requestMethod", req.Method,
+		"requestUrl", uri.String(),
+		Unless(0 == status, "status"), strconv.Itoa(status),
+		Unless(reqSize < 0, "requestSize"), strconv.FormatInt(reqSize, 10),
+		Unless(respSize < 0, "responseSize"), strconv.FormatInt(respSize, 10),
+		Unless("" == lag, "latency"), lag,
+		"remoteIp", remoteAddr,
+		// "serverIp", ?,
+		Unless("" == ref, "referer"), ref,
+		Unless("" == ua, "userAgent"), ua,
 	)
 }

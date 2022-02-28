@@ -1,12 +1,11 @@
 package lager
 
-import(
+import (
 	"fmt"
 	"os"
 	"strconv"
 	"sync"
 )
-
 
 // A named module that allows separate log levels to be en-/disabled.
 type Module struct {
@@ -15,28 +14,26 @@ type Module struct {
 	lagers [int(nLevels)]Lager
 }
 
-
 var modMap sync.Map
-
 
 func getMod(name string) *Module {
 	x, ok := modMap.Load(name)
-	if ! ok {
-		return nil  // No such module
+	if !ok {
+		return nil // No such module
 	}
 	if mod, ok := x.(*Module); ok {
-		return mod  // Valid module (or valid nil pointer of type *Module)
+		return mod // Valid module (or valid nil pointer of type *Module)
 	}
-	return nil      // Invalid module got stored somehow?
+	return nil // Invalid module got stored somehow?
 }
 
 func storeMod(name string, mod *Module) *Module {
 	_, _ = modMap.LoadOrStore(name, mod)
 	cur := getMod(name)
-	if nil == cur {             // An invalid module got stored somehow:
+	if nil == cur { // An invalid module got stored somehow:
 		modMap.Store(name, mod) // Overwrite it.
 		cur = getMod(name)
-		if nil == cur {         // Stored module is still invalid:
+		if nil == cur { // Stored module is still invalid:
 			panic("Failed to store module " + name)
 		}
 	}
@@ -122,16 +119,26 @@ func (m *Module) Init(levels string) *Module {
 	}
 	for _, c := range levels {
 		switch c {
-		case 'F': m.lagers[int(lFail)]  = &logger{lev: lFail,  mod: m.name}
-		case 'W': m.lagers[int(lWarn)]  = &logger{lev: lWarn,  mod: m.name}
-		case 'N': m.lagers[int(lNote)]  = &logger{lev: lNote,  mod: m.name}
-		case 'A': m.lagers[int(lAcc)]   = &logger{lev: lAcc,   mod: m.name}
-		case 'I': m.lagers[int(lInfo)]  = &logger{lev: lInfo,  mod: m.name}
-		case 'T': m.lagers[int(lTrace)] = &logger{lev: lTrace, mod: m.name}
-		case 'D': m.lagers[int(lDebug)] = &logger{lev: lDebug, mod: m.name}
-		case 'O': m.lagers[int(lObj)]   = &logger{lev: lObj,   mod: m.name}
-		case 'G': m.lagers[int(lGuts)]  = &logger{lev: lGuts,  mod: m.name}
-		default:  continue
+		case 'F':
+			m.lagers[int(lFail)] = &logger{lev: lFail, mod: m.name}
+		case 'W':
+			m.lagers[int(lWarn)] = &logger{lev: lWarn, mod: m.name}
+		case 'N':
+			m.lagers[int(lNote)] = &logger{lev: lNote, mod: m.name}
+		case 'A':
+			m.lagers[int(lAcc)] = &logger{lev: lAcc, mod: m.name}
+		case 'I':
+			m.lagers[int(lInfo)] = &logger{lev: lInfo, mod: m.name}
+		case 'T':
+			m.lagers[int(lTrace)] = &logger{lev: lTrace, mod: m.name}
+		case 'D':
+			m.lagers[int(lDebug)] = &logger{lev: lDebug, mod: m.name}
+		case 'O':
+			m.lagers[int(lObj)] = &logger{lev: lObj, mod: m.name}
+		case 'G':
+			m.lagers[int(lGuts)] = &logger{lev: lGuts, mod: m.name}
+		default:
+			continue
 		}
 		m.levels += strconv.QuoteRune(c)
 	}
@@ -204,17 +211,28 @@ func (m *Module) Guts(cs ...Ctx) Lager { return m.modLevel(lGuts, cs...) }
 // logs or doesn't, depending on whether the specified log level is enabled.
 func (m *Module) Level(lev byte, cs ...Ctx) Lager {
 	switch lev {
-	case 'P': return m.modLevel(lPanic, cs...)
-	case 'E': return m.modLevel(lExit, cs...)
-	case 'F': return m.modLevel(lFail, cs...)
-	case 'W': return m.modLevel(lWarn, cs...)
-	case 'N': return m.modLevel(lNote, cs...)
-	case 'A': return m.modLevel(lAcc, cs...)
-	case 'I': return m.modLevel(lInfo, cs...)
-	case 'T': return m.modLevel(lTrace, cs...)
-	case 'D': return m.modLevel(lDebug, cs...)
-	case 'O': return m.modLevel(lObj, cs...)
-	case 'G': return m.modLevel(lGuts, cs...)
+	case 'P':
+		return m.modLevel(lPanic, cs...)
+	case 'E':
+		return m.modLevel(lExit, cs...)
+	case 'F':
+		return m.modLevel(lFail, cs...)
+	case 'W':
+		return m.modLevel(lWarn, cs...)
+	case 'N':
+		return m.modLevel(lNote, cs...)
+	case 'A':
+		return m.modLevel(lAcc, cs...)
+	case 'I':
+		return m.modLevel(lInfo, cs...)
+	case 'T':
+		return m.modLevel(lTrace, cs...)
+	case 'D':
+		return m.modLevel(lDebug, cs...)
+	case 'O':
+		return m.modLevel(lObj, cs...)
+	case 'G':
+		return m.modLevel(lGuts, cs...)
 	}
 	panic(fmt.Sprintf(
 		"Level() must be one char from \"PEFWNAITDOG\" not %q", lev))
