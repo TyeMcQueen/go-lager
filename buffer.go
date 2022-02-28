@@ -2,7 +2,7 @@ package lager
 
 // Low-level code for composing a log line.
 
-import(
+import (
 	"encoding/json"
 	"fmt"
 	"io"
@@ -12,12 +12,11 @@ import(
 	"time"
 )
 
-
 // TYPES //
 
 // An unshared, temporary structure for efficiently logging one line.
 type buffer struct {
-	scratch [16*1024]byte   // Space so we can allocate memory only rarely.
+	scratch [16 * 1024]byte // Space so we can allocate memory only rarely.
 	buf     []byte          // Bytes not yet written (a slice into above).
 	w       io.Writer       // Usually os.Stdout, else os.Stderr.
 	delim   string          // Delimiter to go before next value.
@@ -28,7 +27,6 @@ type buffer struct {
 type Stringer interface {
 	String() string
 }
-
 
 // GLOBALS //
 
@@ -45,7 +43,6 @@ var outMu sync.Mutex
 // The (JSON) delimiter between values:
 const comma = ", "
 
-
 // FUNCS //
 
 var noEsc [256]bool
@@ -61,7 +58,7 @@ func init() {
 
 // Called when we need to flush early, to prevent interleaved log lines.
 func (b *buffer) lock() {
-	if ! b.locked {
+	if !b.locked {
 		outMu.Lock()
 		b.locked = true
 	}
@@ -85,11 +82,11 @@ func (b *buffer) unlock() {
 
 // Append a slice of bytes to the log line.
 func (b *buffer) writeBytes(s []byte) {
-	if cap(b.buf) < len(b.buf) + len(s) {
-		b.lock()    // Can't fit line in buffer; lock output mutex and flush.
+	if cap(b.buf) < len(b.buf)+len(s) {
+		b.lock() // Can't fit line in buffer; lock output mutex and flush.
 	}
 	if cap(b.buf) < len(s) {
-		b.w.Write(s)    // Next chunk won't fit in buffer, just write it.
+		b.w.Write(s) // Next chunk won't fit in buffer, just write it.
 	} else {
 		b.buf = append(b.buf, s...)
 	}
@@ -98,7 +95,7 @@ func (b *buffer) writeBytes(s []byte) {
 // Append strings to the log line.
 func (b *buffer) write(strs ...string) {
 	for _, s := range strs {
-		if cap(b.buf) < len(b.buf) + len(s) {
+		if cap(b.buf) < len(b.buf)+len(s) {
 			b.lock()
 		}
 		if cap(b.buf) < len(s) {
@@ -116,13 +113,20 @@ func (b *buffer) write(strs ...string) {
 
 func escapeByte(c byte) string {
 	switch c {
-	case '"':   return "\\\""
-	case '\\':  return "\\\\"
-	case '\b':  return "\\b"
-	case '\f':  return "\\f"
-	case '\n':  return "\\n"
-	case '\r':  return "\\r"
-	case '\t':  return "\\t"
+	case '"':
+		return "\\\""
+	case '\\':
+		return "\\\\"
+	case '\b':
+		return "\\b"
+	case '\f':
+		return "\\f"
+	case '\n':
+		return "\\n"
+	case '\r':
+		return "\\r"
+	case '\t':
+		return "\\t"
 	}
 	buf := []byte("\\u0000")
 	for o := 5; 1 < o; o-- {
@@ -161,7 +165,7 @@ func (b *buffer) escape(s string) {
 		}
 		b.write(s[beg:i])
 		b.write(escapeByte(c))
-		beg = i+1
+		beg = i + 1
 	}
 	b.write(s[beg:])
 }
@@ -175,34 +179,36 @@ func (b *buffer) escapeBytes(s []byte) {
 		}
 		b.writeBytes(s[beg:i])
 		b.write(escapeByte(c))
-		beg = i+1
+		beg = i + 1
 	}
 	b.writeBytes(s[beg:])
 }
 
 // Append a 2-digit value to the buffer (with leading '0').
 func (b *buffer) int2(val int) {
-//  if cap(b.buf) < len(b.buf) + 2 {
-//      b.lock()
-//  }
+	// Not needed so long as calls to int2() remain protected:
+	//  if cap(b.buf) < len(b.buf) + 2 {
+	//      b.lock()
+	//  }
 	l := len(b.buf)
-	b.buf = b.buf[0:2+l]
+	b.buf = b.buf[0 : 2+l]
 	b.buf[l] = '0' + byte(val/10)
 	b.buf[l+1] = '0' + byte(val%10)
 }
 
 // Append a decimal value of specified length with leading '0's.
 func (b *buffer) int(val int, digits int) {
-//  if cap(b.buf) < len(b.buf) + digits {
-//      b.lock()
-//  }
+	// Not needed so long as calls to int() remain protected:
+	//  if cap(b.buf) < len(b.buf) + digits {
+	//      b.lock()
+	//  }
 	bef := len(b.buf)
 	b.buf = strconv.AppendInt(b.buf, int64(val), 10)
 	aft := len(b.buf)
-	l := aft-bef
+	l := aft - bef
 	// Prepend leading '0's to get desired length:
 	if l < digits {
-		b.buf = b.buf[0:bef+digits]
+		b.buf = b.buf[0 : bef+digits]
 		copy(b.buf[bef+digits-l:bef+digits], b.buf[bef:aft])
 		for i := bef; i < bef+digits-l; i++ {
 			b.buf[i] = '0'
@@ -212,7 +218,7 @@ func (b *buffer) int(val int, digits int) {
 
 // Append a quoted UTC timestamp to the log line.
 func (b *buffer) timestamp() {
-	if cap(b.buf) < len(b.buf) + 22 {
+	if cap(b.buf) < len(b.buf)+22 {
 		b.lock()
 	}
 	now := time.Now().In(time.UTC)
@@ -224,9 +230,9 @@ func (b *buffer) timestamp() {
 	b.write("-")
 	b.int2(day)
 	if nil == _keys {
-		b.write(" ")    // Use easier-for-humans-to-read format
+		b.write(" ") // Use easier-for-humans-to-read format
 	} else {
-		b.write("T")    // Use standard format (GCP cares)
+		b.write("T") // Use standard format (GCP cares)
 	}
 	b.int2(now.Hour())
 	b.write(":")
@@ -277,7 +283,7 @@ func (b *buffer) pairs(m AMap) {
 func (b *buffer) rawPairs(m RawMap) {
 	skipping := false
 	for i, elt := range m {
-		if 0 == 1 & i {
+		if 0 == 1&i {
 			if _, ok := elt.(skipThisPair); ok {
 				skipping = true
 			} else {
@@ -290,7 +296,7 @@ func (b *buffer) rawPairs(m RawMap) {
 			b.scalar(elt)
 		}
 	}
-	if 1 == 1 & len(m) && ! skipping {
+	if 1 == 1&len(m) && !skipping {
 		b.scalar(nil)
 	}
 }
@@ -298,32 +304,51 @@ func (b *buffer) rawPairs(m RawMap) {
 // Append a JSON-encoded scalar value to the log line.
 func (b *buffer) scalar(s interface{}) {
 	switch v := s.(type) {
-	case func() interface{}: s = v()
+	case func() interface{}:
+		s = v()
 	}
 	switch v := s.(type) {
-	case AMap: if nil == v || 0 == len(v.keys) { return }
+	case AMap:
+		if nil == v || 0 == len(v.keys) {
+			return
+		}
 	}
 	b.write(b.delim)
 	b.delim = ""
-	if cap(b.buf) < len(b.buf) + 64 {
-		b.lock()    // Leave room for strconv.AppendFloat() or similar
+	if cap(b.buf) < len(b.buf)+64 {
+		b.lock() // Leave room for strconv.AppendFloat() or similar
 	}
 	switch v := s.(type) {
-	case nil:       b.write("null")
-	case string:    b.quote(v)
-	case []byte:    b.quoteBytes(v)
-	case int:       b.buf = strconv.AppendInt(b.buf, int64(v), 10)
-	case int8:      b.buf = strconv.AppendInt(b.buf, int64(v), 10)
-	case int16:     b.buf = strconv.AppendInt(b.buf, int64(v), 10)
-	case int32:     b.buf = strconv.AppendInt(b.buf, int64(v), 10)
-	case int64:     b.buf = strconv.AppendInt(b.buf, v, 10)
-	case uint:      b.buf = strconv.AppendUint(b.buf, uint64(v), 10)
-	case uint8:     b.buf = strconv.AppendUint(b.buf, uint64(v), 10)
-	case uint16:    b.buf = strconv.AppendUint(b.buf, uint64(v), 10)
-	case uint32:    b.buf = strconv.AppendUint(b.buf, uint64(v), 10)
-	case uint64:    b.buf = strconv.AppendUint(b.buf, v, 10)
-	case float32:   b.buf = strconv.AppendFloat(b.buf, float64(v), 'g', -1, 32)
-	case float64:   b.buf = strconv.AppendFloat(b.buf, v, 'g', -1, 64)
+	case nil:
+		b.write("null")
+	case string:
+		b.quote(v)
+	case []byte:
+		b.quoteBytes(v)
+	case int:
+		b.buf = strconv.AppendInt(b.buf, int64(v), 10)
+	case int8:
+		b.buf = strconv.AppendInt(b.buf, int64(v), 10)
+	case int16:
+		b.buf = strconv.AppendInt(b.buf, int64(v), 10)
+	case int32:
+		b.buf = strconv.AppendInt(b.buf, int64(v), 10)
+	case int64:
+		b.buf = strconv.AppendInt(b.buf, v, 10)
+	case uint:
+		b.buf = strconv.AppendUint(b.buf, uint64(v), 10)
+	case uint8:
+		b.buf = strconv.AppendUint(b.buf, uint64(v), 10)
+	case uint16:
+		b.buf = strconv.AppendUint(b.buf, uint64(v), 10)
+	case uint32:
+		b.buf = strconv.AppendUint(b.buf, uint64(v), 10)
+	case uint64:
+		b.buf = strconv.AppendUint(b.buf, v, 10)
+	case float32:
+		b.buf = strconv.AppendFloat(b.buf, float64(v), 'g', -1, 32)
+	case float64:
+		b.buf = strconv.AppendFloat(b.buf, v, 'g', -1, 64)
 	case bool:
 		if v {
 			b.write("true")
@@ -332,11 +357,15 @@ func (b *buffer) scalar(s interface{}) {
 		}
 	case []string:
 		b.open("[")
-		for _, s := range v { b.scalar(s) }
+		for _, s := range v {
+			b.scalar(s)
+		}
 		b.close("]")
 	case AList:
 		b.open("[")
-		for _, s := range v { b.scalar(s) }
+		for _, s := range v {
+			b.scalar(s)
+		}
 		b.close("]")
 	case RawMap:
 		b.open("{")
