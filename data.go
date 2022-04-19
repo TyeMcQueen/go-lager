@@ -7,7 +7,11 @@ import (
 
 type skipThisPair string
 
-var SkipThisPair = skipThisPair("")
+// SkipThisPair can be used as a "label" to indicate that the following
+// value should just be ignored.  You would usually call lager.Unless()
+// rather than use this directly.
+//
+const SkipThisPair = skipThisPair("")
 
 // Storage for an ordered list of key/value pairs (without duplicate keys).
 type KVPairs struct {
