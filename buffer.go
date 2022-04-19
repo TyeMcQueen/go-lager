@@ -282,16 +282,31 @@ func (b *buffer) pairs(m AMap) {
 // Append the key/value pairs from a RawMap:
 func (b *buffer) rawPairs(m RawMap) {
 	skipping := false
+	inlining := false
 	for i, elt := range m {
 		if 0 == 1&i {
 			if _, ok := elt.(skipThisPair); ok {
 				skipping = true
+			} else if _, ok := elt.(inlinePairs); ok {
+				inlining = true
 			} else {
 				b.quote(S(elt))
 				b.colon()
 			}
 		} else if skipping {
 			skipping = false
+		} else if inlining {
+			switch m := elt.(type) {
+			case RawMap:
+				b.rawPairs(m)
+			case KVPairs:
+				b.pairs(&m)
+			case AMap:
+				b.pairs(m)
+			default:
+				b.pair("cannot-inline", elt)
+			}
+			inlining = false
 		} else {
 			b.scalar(elt)
 		}
