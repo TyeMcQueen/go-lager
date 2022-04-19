@@ -13,6 +13,18 @@ type skipThisPair string
 //
 const SkipThisPair = skipThisPair("")
 
+type inlinePairs string
+
+// InlinePairs can be used as a "label" to indicate that the following
+// value that contains label-subvalue pairs (a value of type AMap or RawMap)
+// should be treated as if the pairs had been passed in at that higher level.
+//
+//      func Assert(pairs ...interface{}) {
+//          lager.Fail().MMap("Assertion failed", lager.InlinePairs, pairs)
+//      }
+//
+const InlinePairs = inlinePairs("")
+
 // Storage for an ordered list of key/value pairs (without duplicate keys).
 type KVPairs struct {
 	keys []string
