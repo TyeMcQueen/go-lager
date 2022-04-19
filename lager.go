@@ -485,7 +485,7 @@ func (l *logger) List(args ...interface{}) {
 		b.scalar(args)
 	} else if 1 == len(args) && "" != _keys.msg {
 		b.pair(_keys.msg, args[0])
-		if "" != inGcp && ( nil == l.kvp || 0 == len(l.kvp.keys) ) {
+		if "" != inGcp && (nil == l.kvp || 0 == len(l.kvp.keys)) {
 			b.pair("json", 1) // Keep jsonPayload.message not textPayload
 		}
 	} else {
@@ -509,7 +509,7 @@ func (l *logger) MList(message string, args ...interface{}) {
 		b.pair(_keys.msg, message)
 		if 0 < len(args) {
 			b.pair(_keys.args, args)
-		} else if "" != inGcp && ( nil == l.kvp || 0 == len(l.kvp.keys) ) {
+		} else if "" != inGcp && (nil == l.kvp || 0 == len(l.kvp.keys)) {
 			b.pair("json", 1) // Keep jsonPayload.message not textPayload
 		}
 	} else if 0 < len(args) {
@@ -547,7 +547,7 @@ func (l *logger) MMap(message string, pairs ...interface{}) {
 		b.pair(key, message)
 		b.rawPairs(RawMap(pairs))
 		if "" != inGcp && 0 == len(pairs) &&
-			( nil == l.kvp || 0 == len(l.kvp.keys) ) {
+			(nil == l.kvp || 0 == len(l.kvp.keys)) {
 			b.pair("json", 1) // Keep jsonPayload.message not textPayload
 		}
 	}

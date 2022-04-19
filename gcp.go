@@ -170,7 +170,7 @@ func GcpHttp(req *http.Request, resp *http.Response, start *time.Time) RawMap {
 //
 func GcpHttpF(
 	req *http.Request, resp *http.Response, start *time.Time,
-) (func() interface{}) {
+) func() interface{} {
 	return func() interface{} {
 		return GcpHttp(req, resp, start)
 	}
@@ -239,7 +239,7 @@ func GcpTraceFromHeader(
 // GcpSetTraceHeader() directly yourself.
 //
 func GcpSetTraceHeader(head http.Header, traceID string, spanID uint64) {
-	head.Set(traceHeader, traceID + "/" + strconv.FormatUint(spanID, 10))
+	head.Set(traceHeader, traceID+"/"+strconv.FormatUint(spanID, 10))
 }
 
 // GcpContextAddTrace() takes a Context and returns one that has "trace"
@@ -279,8 +279,8 @@ func GcpContextAddTrace(
 		project = id
 	}
 	ctx = AddPairs(ctx,
-		GcpTraceKey, "projects/" + project + "/traces/" + traceID,
-		GcpSpanKey,  strconv.FormatUint(spanID, 16),
+		GcpTraceKey, "projects/"+project+"/traces/"+traceID,
+		GcpSpanKey, strconv.FormatUint(spanID, 16),
 	)
 	return ctx, nil
 }
@@ -352,8 +352,8 @@ func GcpRequestAddTrace(
 	return req.WithContext(ctx)
 }
 
-const projIdUrl =
-	"http://metadata.google.internal/computeMetadata/v1/project/project-id"
+const projIdUrl = "http://metadata.google.internal/computeMetadata/v1/project/project-id"
+
 var projectID string
 
 // GcpProjectID() returns the current GCP project ID [which is not the
