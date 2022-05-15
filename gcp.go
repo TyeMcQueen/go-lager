@@ -15,6 +15,43 @@ import (
 const GcpSpanKey = "logging.googleapis.com/spanId"
 const GcpTraceKey = "logging.googleapis.com/trace"
 
+const projIdUrl = "http://metadata.google.internal/computeMetadata/v1/project/project-id"
+
+var projectID string
+
+// GcpProjectID() returns the current GCP project ID [which is not the
+// project number].  Once the lookup succeeds, that value is saved and
+// returned for subsequent calls.  The lookup times out after 0.1s.
+//
+// Set GCP_PROJECT_ID in your environment to avoid the more complex lookup.
+//
+func GcpProjectID(ctx Ctx) (string, error) {
+	if "" == projectID {
+		projectID = os.Getenv("GCP_PROJECT_ID")
+	}
+	if "" == projectID {
+		reqCtx, can := context.WithTimeout(ctx, 100*time.Millisecond)
+		defer can()
+		req, err := http.NewRequestWithContext(reqCtx, "GET", projIdUrl, nil)
+		if nil != err {
+			return "", fmt.Errorf("GcpProjectID() is broken: %w", err)
+		}
+		req.Header.Set("Metadata-Flavor", "Google")
+		resp, err := new(http.Client).Do(req)
+		if nil != err {
+			return "", fmt.Errorf("Can't get GCP project ID (from %s): %w",
+				projIdUrl, err)
+		}
+		b, err := ioutil.ReadAll(resp.Body)
+		if nil != err {
+			return "", fmt.Errorf(
+				"Can't read GCP project ID from response body: %w", err)
+		}
+		projectID = string(b)
+	}
+	return projectID, nil
+}
+
 // GcpLevelName takes a Lager level name (only the first letter matters and
 // it must be upper case) and returns the corresponding value GCP uses in
 // structured logging to represent the severity of such logs.  Levels are
@@ -350,41 +387,4 @@ func GcpRequestAddTrace(
 	ctx := GcpRequestContextAddTrace(
 		req, req.Context(), traceID, spanID, project)
 	return req.WithContext(ctx)
-}
-
-const projIdUrl = "http://metadata.google.internal/computeMetadata/v1/project/project-id"
-
-var projectID string
-
-// GcpProjectID() returns the current GCP project ID [which is not the
-// project number].  Once the lookup succeeds, that value is saved and
-// returned for subsequent calls.  The lookup times out after 0.1s.
-//
-// Set GCP_PROJECT_ID in your environment to avoid the more complex lookup.
-//
-func GcpProjectID(ctx Ctx) (string, error) {
-	if "" == projectID {
-		projectID = os.Getenv("GCP_PROJECT_ID")
-	}
-	if "" == projectID {
-		reqCtx, can := context.WithTimeout(ctx, 100*time.Millisecond)
-		defer can()
-		req, err := http.NewRequestWithContext(reqCtx, "GET", projIdUrl, nil)
-		if nil != err {
-			return "", fmt.Errorf("GcpProjectID() is broken: %w", err)
-		}
-		req.Header.Set("Metadata-Flavor", "Google")
-		resp, err := new(http.Client).Do(req)
-		if nil != err {
-			return "", fmt.Errorf("Can't get GCP project ID (from %s): %w",
-				projIdUrl, err)
-		}
-		b, err := ioutil.ReadAll(resp.Body)
-		if nil != err {
-			return "", fmt.Errorf(
-				"Can't read GCP project ID from response body: %w", err)
-		}
-		projectID = string(b)
-	}
-	return projectID, nil
 }
