@@ -52,6 +52,34 @@ func GcpProjectID(ctx Ctx) (string, error) {
 	return projectID, nil
 }
 
+// RunningInGcp() tells Lager to log messages in a format that works best
+// when running inside of the Google Cloud Platform (GCP).  You can call
+// it from your main() func so you don't have to set LAGER_GCP=1 in your
+// environment.  Do not call it from an init() function as that can cause
+// a race condition.
+//
+// In particular, it runs:
+//
+//      if "" == os.Getenv("LAGER_KEYS") {
+//          lager.Keys("time", "severity", "message", "data", "", "module")
+//      }
+//      lager.LevelNotation = lager.GcpLevelName
+//
+// It also arranges for an extra element to be added to the JSON if nothing
+// but a message is logged so that jsonPayload.message does not get
+// transformed into textPayload when the log is ingested into Cloud Logging.
+//
+// RunningInGcp() is called automatically if the "LAGER_GCP" environment
+// variable contains a non-empty value when the process is started.
+//
+func RunningInGcp() {
+	_inGcp = "1"
+	if "" == os.Getenv("LAGER_KEYS") {
+		Keys("time", "severity", "message", "data", "", "module")
+	}
+	LevelNotation = GcpLevelName
+}
+
 // GcpLevelName takes a Lager level name (only the first letter matters and
 // it must be upper case) and returns the corresponding value GCP uses in
 // structured logging to represent the severity of such logs.  Levels are

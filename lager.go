@@ -172,7 +172,7 @@ var PathParts = 0
 // it instead defaults to using GcpLevelName().
 var LevelNotation = func(lev string) string { return lev }
 
-var inGcp = os.Getenv("LAGER_GCP")
+var _inGcp = os.Getenv("LAGER_GCP")
 
 // FUNCS //
 
@@ -181,9 +181,8 @@ func init() {
 	_lagers[int(lExit)] = &logger{lev: lExit}
 	Init(os.Getenv("LAGER_LEVELS"))
 
-	if "" != inGcp {
-		Keys("time", "severity", "message", "data", "", "module")
-		LevelNotation = GcpLevelName
+	if "" != _inGcp {
+		RunningInGcp()
 	}
 
 	if k := os.Getenv("LAGER_KEYS"); "" != k {
@@ -486,7 +485,7 @@ func (l *logger) List(args ...interface{}) {
 		b.scalar(args)
 	} else if 1 == len(args) && "" != _keys.msg {
 		b.pair(_keys.msg, args[0])
-		if "" != inGcp && (nil == l.kvp || 0 == len(l.kvp.keys)) {
+		if "" != _inGcp && (nil == l.kvp || 0 == len(l.kvp.keys)) {
 			b.pair("json", 1) // Keep jsonPayload.message not textPayload
 		}
 	} else {
@@ -510,7 +509,7 @@ func (l *logger) MList(message string, args ...interface{}) {
 		b.pair(_keys.msg, message)
 		if 0 < len(args) {
 			b.pair(_keys.args, args)
-		} else if "" != inGcp && (nil == l.kvp || 0 == len(l.kvp.keys)) {
+		} else if "" != _inGcp && (nil == l.kvp || 0 == len(l.kvp.keys)) {
 			b.pair("json", 1) // Keep jsonPayload.message not textPayload
 		}
 	} else if 0 < len(args) {
@@ -547,7 +546,7 @@ func (l *logger) MMap(message string, pairs ...interface{}) {
 		}
 		b.pair(key, message)
 		b.rawPairs(RawMap(pairs))
-		if "" != inGcp && 0 == len(pairs) &&
+		if "" != _inGcp && 0 == len(pairs) &&
 			(nil == l.kvp || 0 == len(l.kvp.keys)) {
 			b.pair("json", 1) // Keep jsonPayload.message not textPayload
 		}
