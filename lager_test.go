@@ -9,9 +9,6 @@ import (
 	"testing"
 
 	"github.com/TyeMcQueen/go-lager"
-	"github.com/rs/zerolog"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 )
 
 var _ = io.EOF
@@ -34,24 +31,6 @@ func TestLager(t *testing.T) {
 	mod.Fail(ctx).List("From a module")
 }
 
-func TestZero(t *testing.T) {
-	logger := zerolog.New(os.Stdout).With().Timestamp().Logger()
-	logger.Info().Msg(fakeMessage)
-}
-
-func TestZapS(t *testing.T) {
-	logger, _ := zap.NewProduction()
-	defer logger.Sync()
-	sugar := logger.Sugar()
-	sugar.Infow(fakeMessage)
-}
-
-func TestZapL(t *testing.T) {
-	logger, _ := zap.NewProduction()
-	defer logger.Sync()
-	logger.Info(fakeMessage)
-}
-
 func BenchmarkLog(b *testing.B) {
 	lager.OutputDest = ioutil.Discard
 	lager.Fail().List("Initialize things")
@@ -63,60 +42,6 @@ func BenchmarkLog(b *testing.B) {
 			lager.Fail().Map("msg", fakeMessage, "size", 45)
 			lager.Fail().List("Is message short and simple?", true)
 			lager.Fail().Map("Failure", io.EOF, "Pos", 12345, "Percent", 12.345)
-		}
-	})
-}
-
-func BenchmarkZero(b *testing.B) {
-	logger := zerolog.New(ioutil.Discard).With().Timestamp().Logger()
-	//  logger := zerolog.New(os.Stdout)
-	b.ResetTimer()
-	b.ReportAllocs()
-	b.RunParallel(func(pb *testing.PB) {
-		for pb.Next() {
-			logger.Info().Int("size", 45).Msg(fakeMessage)
-		}
-	})
-}
-
-type Discarder struct {
-	io.Writer
-}
-
-func (_ Discarder) Sync() error { return nil }
-
-var discard = Discarder{Writer: ioutil.Discard}
-
-func BenchmarkZapS(b *testing.B) {
-	logger := zap.New(zapcore.NewCore(
-		zapcore.NewJSONEncoder(zap.NewProductionConfig().EncoderConfig),
-		discard,
-		zap.DebugLevel,
-	))
-	defer logger.Sync()
-	sugar := logger.Sugar()
-	b.ResetTimer()
-	b.ReportAllocs()
-	b.RunParallel(func(pb *testing.PB) {
-		for pb.Next() {
-			sugar.Infow(fakeMessage, "size", 45)
-		}
-	})
-}
-
-func BenchmarkZapL(b *testing.B) {
-	//  logger, _ := zap.NewProduction()
-	logger := zap.New(zapcore.NewCore(
-		zapcore.NewJSONEncoder(zap.NewProductionConfig().EncoderConfig),
-		discard,
-		zap.DebugLevel,
-	))
-	defer logger.Sync()
-	b.ResetTimer()
-	b.ReportAllocs()
-	b.RunParallel(func(pb *testing.PB) {
-		for pb.Next() {
-			logger.Info(fakeMessage, zap.Int("size", 45))
 		}
 	})
 }
