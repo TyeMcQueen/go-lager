@@ -185,6 +185,7 @@ func init() {
 		Keys("time", "severity", "message", "data", "", "module")
 		LevelNotation = GcpLevelName
 	}
+
 	if k := os.Getenv("LAGER_KEYS"); "" != k {
 		keys := strings.Split(k, ",")
 		if 6 != len(keys) {
