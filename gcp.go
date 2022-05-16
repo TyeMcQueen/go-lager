@@ -3,6 +3,7 @@ package lager
 import (
 	"context"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -292,6 +293,9 @@ func GcpLogAccess(
 // 'ctx' is the Context from which the new Context is created.  'span'
 // contains the GCP CloudTrace span to be added.
 //
+// See also GcpContextReceivedRequest() and/or GcpContextSendingRequest()
+// which call this and do several other useful things.
+//
 func GcpContextAddTrace(ctx Ctx, span spans.Factory) Ctx {
 	if nil != span && 0 != span.GetSpanID() {
 		ctx = AddPairs(ctx,
@@ -299,4 +303,233 @@ func GcpContextAddTrace(ctx Ctx, span spans.Factory) Ctx {
 			GcpSpanKey, spans.HexSpanID(span.GetSpanID()))
 	}
 	return ctx
+}
+
+// GcpContextReceivedRequest() does several things that are useful when
+// a server receives a new request.  'ctx' is the Context passed to the
+// request handler and 'req' is the received request.
+//
+// An "httpRequest" key/value pair is added to the Context so that the
+// request details will be included in any subsequent log lines [when the
+// returned Context is passed to lager.Warn() or similar methods].
+//
+// If the request headers include GCP trace information, then that is
+// extracted [see spans.Factory.ImportFromHeaders()].
+//
+// If 'ctx' contains a spans.Factory, then that is fetched and used to
+// create either a new sub-span or (if there is no CloudTrace context in
+// the headers) a new trace (and span).  If the Factory is able to create
+// a new span, then it is marked as a "SERVER" span and it is stored in
+// the context via spans.ContextStoreSpan().
+//
+// If a span was imported or created, then the span information is added
+// to the Context as pairs to be logged [see GcpContextAddTrace()] and
+// a span will be contained in the returned Factory.
+//
+// The updated Context is returned (Contexts are immutable).
+//
+// It is usually called in a manner similar to:
+//
+//      ctx, span := lager.GcpContextReceivedRequest(ctx, req)
+//      defer spans.FinishSpan(span)
+// or
+//      ctx, span := lager.GcpContextReceivedRequest(ctx, req)
+//      var resp *http.Response
+//      defer lager.GcpSendingResponse(span, req, resp)
+//
+// See also GcpReceivedRequest().
+//
+// The order of arguments is 'ctx' then 'req' as information moves only in
+// the direction ctx <- req (if we consider 'ctx' to represent both the
+// argument and the returned value) and information always moves right-to-
+// left in Go (in assignment statements and when using channels).
+//
+func GcpContextReceivedRequest(
+	ctx Ctx, req *http.Request,
+) (Ctx, spans.Factory) {
+	ctx = AddPairs(ctx, "httpRequest", GcpHttp(req, nil, nil))
+	span := spans.ContextGetSpan(ctx)
+	if nil == span {
+		if proj, err := GcpProjectID(nil); nil != err {
+			Fail(ctx).MMap("Could not get GCP Project ID", "err", err)
+		} else { // Can't write new spans; just do read-only span operations:
+			span = spans.NewRoSpan(proj)
+		}
+	}
+	if nil != span {
+		span = span.ImportFromHeaders(req.Header)
+		if sub := span.NewSpan(); nil != sub {
+			span = sub
+			span.SetIsServer()
+			ctx = spans.ContextStoreSpan(ctx, span)
+		}
+		ctx = GcpContextAddTrace(ctx, span)
+	}
+	return ctx, span
+}
+
+// GcpReceivedRequest() gets the Context from '*pReq' and uses it to call
+// GcpContextReceivedRequest().  Then it replaces '*pReq' with a version of
+// the request with the new Context attached.  Then it returns the Factory.
+//
+// It is usually called in a manner similar to:
+//
+//      defer spans.FinishSpan(lager.GcpReceivedRequest(&req))
+// or
+//      var resp *http.Response
+//      defer lager.GcpSendingResponse(
+//          lager.GcpReceivedRequest(&req), req, resp)
+//
+// Using GcpContextReceivedRequest() can be slightly more efficient if you
+// either start with a Context different from the one attached to the
+// Request or will not attach the new Context to the Request (or will adjust
+// it further before attaching it) since each time WithContext() is called
+// on a Request, the Request must be copied.
+//
+// The spans package is from "github.com/TyeMcQueen/tools-gcp/trace/spans".
+//
+func GcpReceivedRequest(pReq **http.Request) spans.Factory {
+	ctx, span := GcpContextReceivedRequest((*pReq).Context(), *pReq)
+	*pReq = (*pReq).WithContext(ctx)
+	return span
+}
+
+// GcpContextSendingRequest() does several things that are useful when a
+// server is about to send a request to a dependent service.  'req' is the
+// Request that is about to be sent.  'ctx' is the server's current Context.
+//
+// The current span is fetched from 'ctx' [such as the one placed there
+// by GcpReceivedRequest() when the original request was received].  A new
+// sub-span is created, if possible.  If so, then it is marked as a "CLIENT"
+// span, it is stored in the Context via spans.ContextStoreSpan(), the
+// returned Factory will contain the new span, and the updated Context will
+// contain 2 pairs (to be logged) from the new span.  Note that the original
+// Context is not (cannot be) modified, so the trace/span pair logged after
+// the request-sending function returns will revert to the prior span.
+//
+// If a span was found or created, then its CloudContext is added to the
+// headers for 'req' so that the dependent service can log it and add its
+// own spans to the trace (unless 'req' is 'nil').
+//
+// The updated Context is returned (Contexts are immutable).
+//
+// The order of arguments is 'req' then 'ctx' as information moves only
+// in the direction req <- ctx and information always moves right-to-left
+// in Go (in assignment statements and when using channels).
+//
+// It is usually called in a manner similar to:
+//
+//      ctx, span := lager.GcpContextSendingRequest(req, ctx)
+//      defer span.FinishSpan(span)
+//
+// See also GcpSendingRequest().
+//
+func GcpContextSendingRequest(req *http.Request, ctx Ctx) (Ctx, spans.Factory) {
+	span := spans.ContextGetSpan(ctx)
+	if nil != span {
+		subspan := span.NewSpan()
+		if nil != subspan {
+			span = subspan
+			span.SetIsClient()
+			ctx = spans.ContextStoreSpan(ctx, span)
+			ctx = GcpContextAddTrace(ctx, span)
+		}
+		if nil != req {
+			span.SetHeader(req.Header)
+		}
+	}
+	return ctx, span
+}
+
+// GcpSendingNewRequest() does several things that are useful when a
+// server is about to send a request to a dependent service, by calling
+// GcpContextSendingRequest().  It takes the same arguments as
+// http.NewRequestWithContext() but returns an extra value.
+//
+// It is usually called in a manner similar to:
+//
+//      req, span, err := lager.GcpSendingNewRequest(ctx, "GET", url, nil)
+//      if nil != err { ... }
+//      defer span.FinishSpan(span)
+//
+func GcpSendingNewRequest(
+	ctx Ctx, method, url string, body io.Reader,
+) (*http.Request, spans.Factory, error) {
+	ctx, span := GcpContextSendingRequest(nil, ctx)
+	req, err := http.NewRequestWithContext(ctx, method, url, body)
+	if nil != err {
+		// ('span' will just get garbage collected and not registered.)
+		return nil, nil, err
+	}
+	span.SetHeader(req.Header)
+	return req, span, nil
+}
+
+// GcpSendingRequest() does several things that are useful when a
+// server is about to send a request to a dependent service, by calling
+// GcpContextSendingRequest().  It uses the Context from '*pReq' and then
+// replaces '*pReq' with a copy of the original Request but with the new
+// Context attached.
+//
+// It is usually called in a manner similar to:
+//
+//      defer spans.FinishSpan(lager.GcpSendingRequest(&req))
+//
+func GcpSendingRequest(pReq **http.Request) spans.Factory {
+	ctx, span := GcpContextSendingRequest(*pReq, (*pReq).Context())
+	*pReq = (*pReq).WithContext(ctx)
+	return span
+}
+
+// GcpFinishSpan() updates a span with the status information from a
+// http.Response and Finish()es the span (which registers it with GCP).
+//
+func GcpFinishSpan(span spans.Factory, resp *http.Response) time.Duration {
+	if !span.GetStart().IsZero() {
+		span.SetStatusCode(int64(resp.StatusCode))
+		if "" != resp.Status {
+			span.SetStatusMessage(resp.Status)
+		}
+		return span.Finish()
+	}
+	return time.Duration(0)
+}
+
+// GcpSendingResponse() does several things that are useful when a server
+// is about to send a response to a request it received.  It combines
+// GcpLogAccess() and GcpFinishSpan().  The access log line written will
+// use the message "Sending response" and will include the passed-in 'pairs'
+// which should be zero or more pairs of a string key followed by an
+// arbitrary value.
+//
+// 'resp' will often be constructed via GcpFakeResponse().
+//
+func GcpSendingResponse(
+	span spans.Factory,
+	req *http.Request,
+	resp *http.Response,
+	pairs ...interface{},
+) {
+	start := span.GetStart()
+	GcpLogAccess(req, resp, &start).MMap(
+		"Sending response", InlinePairs, pairs)
+	GcpFinishSpan(span, resp)
+}
+
+// GcpReceivedResponse() combines GcpLogAccess() and GcpFinishSpan().
+// The access log line written will use the message "Received response"
+// and will include the passed-in 'pairs' which should be zero or more
+// pairs of a string key followed by an arbitrary value.  However, logging
+// every response received from a dependent service may be excessive.
+//
+func GcpReceivedResponse(
+	span spans.Factory,
+	req *http.Request,
+	resp *http.Response,
+	pairs ...interface{},
+) {
+	start := span.GetStart()
+	GcpLogAccess(req, resp, &start).MMap(
+		"Received response", InlinePairs, pairs)
+	GcpFinishSpan(span, resp)
 }
