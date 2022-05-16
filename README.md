@@ -8,8 +8,8 @@ logs quite nice for humans to read even with no processing or tooling.
 
 This is most similar to https://github.com/uber-go/zap and is about as
 efficient in CPU usage and lack of allocations per log line.  But this
-efficiency was not allowed to make it inconvenient to write code that uses
-this library.
+efficiency was not allowed to make it inconvenient to write code that
+uses this library.
 
 Another departure from most logging systems is that Lager encourages you to
 log data, not messages.  This difference can be a little subtle, but it can
@@ -23,7 +23,7 @@ can be enabled individually (enabling "Debug" does not force you to also
 enable "Info").  You can also easily allow separate log levels for specific
 packages or any other logical division you care to use.
 
-Typical logging code:
+Logging code like:
 
     lager.Fail(ctx).Map("Err", err, "for", obj)
 
@@ -34,13 +34,15 @@ might produce a log line like:
 Note that the key/value pairs are always logged in the same order you listed
 them in your code.
 
-But you can even avoid having to come up with key/value pairs, which
-can be convenient for quickly adding logging:
+Forks
+===
 
-    lager.Debug(ctx).List("Connecting to", host, port, path)
+If you use a fork of this repository and want to have changes you make
+accepted upstream, you should use the fork by adding (to go.mod in modules
+where you use the fork) a line like:
 
-In order to be efficient and to keep control over the order of output,
-Lager mostly avoids using the "encoding/json" library and also does not use
-reflection.  But you can pass in any arbitrary data.  If it isn't one of the
-many data types natively supported by Lager, then it will use "encoding/json"
-to marshal it.
+    replace github.com/TyeMcQueen/go-lager => github.com/your/lager v1.2.3
+
+And then use "github.com/TyeMcQueen/go-lager" in 'import' statements and
+in a 'require' directive in the go.mod.  (See "replace directive" in
+https://go.dev/ref/mod.)
