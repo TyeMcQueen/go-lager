@@ -117,6 +117,25 @@ func GcpLevelName(lev string) string {
 	return "0"
 }
 
+// GcpFakeResponse() creates an http.Response suitable for passing to
+// GcpHttp() [or similar] when you just have a status code (and/or a
+// response size) and not a http.Response.
+//
+// Pass 'size' as -1 to omit this information.  Passing 'status' as 0 will
+// cause an explicit 0 to be logged.  Pass 'status' as -1 to omit it.
+// Pass 'desc' as "" to have it set based on 'status'.
+//
+func GcpFakeResponse(status int, size int64, desc string) *http.Response {
+	if "" == desc {
+		desc = http.StatusText(status)
+	}
+	return &http.Response{
+		Status:        desc,
+		StatusCode:    status,
+		ContentLength: size,
+	}
+}
+
 // GcpHtttp() returns a value for logging that GCP will recognize as details
 // about an HTTP(S) request (and perhaps its response), if placed under the
 // key "httpRequest".
@@ -124,6 +143,7 @@ func GcpLevelName(lev string) string {
 // 'req' must not be 'nil' but 'resp' and 'start' can be.  None of the
 // arguments passed will be modified; 'start' is of type '*time.Time' only
 // to make it simple to omit latency calculations by passing in 'nil'.
+// If 'start' points to a 'time.Time' that .IsZero(), then it is ignored.
 //
 // When using tracing, this allows GCP logging to display log lines for the
 // same request (if each includes this block) together.  So this can be a
@@ -168,6 +188,9 @@ func GcpHttp(req *http.Request, resp *http.Response, start *time.Time) RawMap {
 	//      remoteIp = ...
 	//  }
 
+	if nil != start && (*start).IsZero() {
+		start = nil
+	}
 	status := -1
 	respSize := int64(-1)
 	if nil != resp {
@@ -176,6 +199,7 @@ func GcpHttp(req *http.Request, resp *http.Response, start *time.Time) RawMap {
 	} else if nil != start {
 		status = 0
 	}
+
 	lag := ""
 	if nil != start {
 		lag = fmt.Sprintf("%.4fs", time.Now().Sub(*start).Seconds())
