@@ -7,9 +7,9 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"strconv"
-	"strings"
 	"time"
+
+	"github.com/TyeMcQueen/tools-gcp/trace/spans"
 )
 
 const GcpSpanKey = "logging.googleapis.com/spanId"
@@ -253,9 +253,6 @@ func GcpHttpF(
 //      lager.GcpLogAccess(req, resp, &start).MMap(
 //          "Response sent", "User", userID)
 //
-// In a future release, GcpLogAccess() will also register the Cloud Trace
-// span noted in the 'req.Header', if any.
-//
 func GcpLogAccess(
 	req *http.Request, resp *http.Response, pStart *time.Time,
 ) Lager {
@@ -263,156 +260,19 @@ func GcpLogAccess(
 		AddPairs(req.Context(), "httpRequest", GcpHttp(req, resp, pStart)))
 }
 
-const traceHeader = "X-Cloud-Trace-Context"
-
-// GcpTraceFromHeader() takes an 'http.Header' and, if it contains an
-// X-Cloud-Trace-Context header, extracts the trace ID and span ID and
-// returns them.  If the header value is not as expected, then an error is
-// returned.  If the header is simply not present, then all zero values are
-// returned.
+// GcpContextAddTrace() takes a Context and returns one that has the span
+// added as 2 pairs that will be logged and recognized by GCP when that
+// Context is passed to lager.Warn() or similar methods.  If 'span' is 'nil'
+// or an empty Factory, then the original 'ctx' is just returned.
 //
-// You may just want to use GcpRequestAddTrace() rather than calling
-// GcpTraceFromHeader() directly yourself.
+// 'ctx' is the Context from which the new Context is created.  'span'
+// contains the GCP CloudTrace span to be added.
 //
-func GcpTraceFromHeader(
-	head http.Header,
-) (traceID string, spanID uint64, err error) {
-	val := head.Get(traceHeader)
-	if "" == val {
-		return
-	}
-	parts := strings.Split(val, ";")
-	parts = strings.Split(parts[0], "/")
-	if 2 != len(parts) {
-		err = fmt.Errorf("%s value (%s) was not trace/span[;...]",
-			traceHeader, val)
-		return
-	}
-	spanID, err = strconv.ParseUint(parts[1], 10, 64)
-	if nil != err {
-		err = fmt.Errorf("Invalid spanID (%s) from %s: %w",
-			parts[1], traceHeader, err)
-		return
-	}
-	traceID = parts[0]
-	return
-}
-
-// GcpSetTraceHeader() adds/sets the X-Cloud-Trace-Context header.
-//
-// You may just want to use GcpRequestAddTrace() rather than calling
-// GcpSetTraceHeader() directly yourself.
-//
-func GcpSetTraceHeader(head http.Header, traceID string, spanID uint64) {
-	head.Set(traceHeader, traceID+"/"+strconv.FormatUint(spanID, 10))
-}
-
-// GcpContextAddTrace() takes a Context and returns one that has "trace"
-// and "spanId" pairs added so that they will be logged when that Context
-// is passed to lager.Warn() or similar methods.
-//
-// 'ctx' is the Context from which the new Context is created.  'traceID'
-// should be a string of 32 hexadecimal characters.  'spanID' should not be
-// 0.  'project' should be the current GCP Project ID or "" to have that
-// looked up for you.
-//
-// You may just want to use GcpRequestAddTrace() rather than calling
-// GcpContextAddTrace() directly yourself.
-//
-func GcpContextAddTrace(
-	ctx Ctx, traceID string, spanID uint64, project string,
-) (Ctx, error) {
-	if 0 == spanID {
-		return ctx, fmt.Errorf("Span ID must not be 0")
-	}
-	if 32 != len(traceID) {
-		return ctx, fmt.Errorf("Trace ID should be 32 characters not %d (%s)",
-			len(traceID), traceID)
-	}
-	for _, r := range traceID {
-		if '0' <= r && r <= '9' || 'a' <= r && r <= 'f' || 'A' <= r && r <= 'F' {
-			continue
-		}
-		return ctx, fmt.Errorf("Trace ID (%s) contains invalid character (%c)",
-			traceID, r)
-	}
-	if "" == project {
-		id, err := GcpProjectID(ctx)
-		if nil != err {
-			return ctx, err
-		}
-		project = id
-	}
-	ctx = AddPairs(ctx,
-		GcpTraceKey, "projects/"+project+"/traces/"+traceID,
-		GcpSpanKey, strconv.FormatUint(spanID, 16),
-	)
-	return ctx, nil
-}
-
-// GcpRequestContextAddTrace() does the same as GcpRequestAddTrace()
-// except it accepts and returns the context separately, expecting the
-// caller to call req.WithContext(ctx) when they have finished adding
-// things to the context.  This can reduce the number of times that the
-// http.Request must be cloned.
-//
-func GcpRequestContextAddTrace(
-	req *http.Request,
-	ctx context.Context,
-	traceID string,
-	spanID uint64,
-	project string,
-) context.Context {
-	var err error
-	ctx = AddPairs(ctx, "httpRequest", GcpHttp(req, nil, nil))
-	if "" == traceID && 0 == spanID {
-		traceID, spanID, err = GcpTraceFromHeader(req.Header)
-		if nil == err && "" == traceID {
-			return ctx
-		}
-	} else if "" == traceID {
-		err = fmt.Errorf("GcpRequest[Context]AddTrace() called with" +
-			" empty traceID but non-zero spanID")
-	} else if 0 == spanID {
-		err = fmt.Errorf("GcpRequest[Context]AddTrace() called with" +
-			" non-empty traceID but zero spanID")
-	}
-	if "" == project && nil == err {
-		project, err = GcpProjectID(ctx)
-	}
-	if nil == err {
-		ctx, err = GcpContextAddTrace(ctx, traceID, spanID, project)
-	}
-	if nil != err {
-		Warn(ctx).List(err)
+func GcpContextAddTrace(ctx Ctx, span spans.Factory) Ctx {
+	if nil != span && 0 != span.GetSpanID() {
+		ctx = AddPairs(ctx,
+			GcpTraceKey, span.GetTracePath(),
+			GcpSpanKey, spans.HexSpanID(span.GetSpanID()))
 	}
 	return ctx
-}
-
-// GcpRequestAddTrace() takes an '*http.Request' and returns one back that
-// now has its context decorated with an "httpRequest" pair to be logged
-// and perhaps also pairs containing trace and span IDs.
-//
-// If 'traceID' and 'spanID' are both zero values, then GcpTraceFromHeader()
-// is called to get those.
-//
-// If 'project' is "", then GcpProjectID() is called to get that.
-//
-// If any of those fail, then only the "httpRequest" pair is added.
-//
-// Any errors are logged via 'lager.Warn(ctx)' [using the context with the
-// "httpRequest" pair added].
-//
-// In a future release, GcpRequestAddTrace() will create a new span ID
-// and arrange for that span ID to be registered as a child span when
-// GcpLogAccess() is called.
-//
-// See also GcpRequestContextAddTrace().
-//
-func GcpRequestAddTrace(
-	req *http.Request, traceID string, spanID uint64, project string,
-) *http.Request {
-	ctx := GcpRequestContextAddTrace(
-		req, req.Context(), traceID, spanID, project)
-	return req.WithContext(ctx)
 }
