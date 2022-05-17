@@ -1,48 +1,60 @@
 /*
-Logs that are easy for computers to parse, easy for people to read, and easy
-for programmers to generate.  The logs are written in JSON format but the
-order of the data in each line is controlled to make the logs quite nice for
-humans to read even with no processing or tooling.
+Lager makes logs that are easy for computers to parse, easy for people to
+read, and easy for programmers to generate.  It also encourages logging data
+over logging messages, which tends to make logs more useful as well as easier
+for programmers to generate.
 
-	lager.Fail(ctx).List("Can't reach", dest, err)
+You don't need to pass around a logging object.  You can decorate a Go
+context.Context with additional data to be added to each log line written
+when that context applies.
+
+The logs are written in JSON format but the items in JSON are written in
+a controlled order, preserving the order used in the program code.  This
+makes the logs pretty easy for humans to scan even with no processing or
+tooling.
+
+Typical logging code like:
+
+	lager.Fail(ctx).MMap("Can't merge", "dest", dest, "err", err)
+	// MMap() takes a message followed by a map of key/value pairs.
 
 could output:
 
-	["2018-12-31 23:59:59.860Z", "FAIL", "Can't reach", "localhost", "refused"]
+	["2019-12-31 23:59:59.1234Z", "FAIL", "Can't merge",
+		{"dest":"localhost", "err":"refused"}]
 
-unless the Fail log level had been disabled.  While:
+(but as a single line).  If you declare that the code is running inside
+Google Cloud Platform (GCP), it could instead output:
 
-	lager.Info().Map("Err", err, "for", obj)
+	{"time":"2019-12-31T23:59:59.1234Z", "severity":"500",
+		"message":"Can't merge", "dest":"localhost", "err":"refused"}
 
-logs nothing by default.  But if Info log level is enabled, it might log:
+(as a single line) which GCP understands well but note that it is still
+easy for a human to read with the consistent order used.
 
-	["2018-12-31 23:59:59.870Z", "INFO", {"Err":"bad cost", "for":{"cost":-1}}]
+You don't even need to take the time to compose and type labels for data
+items, if it doesn't seem worth it in some cases:
 
-There are 9 log levels and 7 can be separately enabled or diabled.  You
+	lager.Fail(ctx).MList("Can't merge", dest, err)
+	// MList() takes a message followed by arbitrary data items.
+
+There are 11 log levels and 9 can be independently enabled or diabled.  You
 usually use them via code similar to:
 
-	lager.Panic().List(args...) // Calls panic(), always enabled.
-	lager.Exit().Map(pairs...)  // To Stderr, calls os.Exit(1), always enabled.
-	lager.Fail().List(args...)  // For non-normal failures (default on).
-	lager.Warn().Map(pairs...)  // For warnings (default on).
-	lager.Note().Map(pairs...)  // For normal, important notices (default on).
-	lager.Acc().Map(pairs...)   // For access logs (default on).
-	lager.Info().List(args...)  // For normal events (default off).
-	laber.Trace().List(args...) // For tracing code flow (default off).
-	laber.Debug().Map(pairs...) // For debugging details (default off).
-	laber.Obj().List(args....)  // For object dumps (default off).
-	lager.Guts().Map(pairs...)  // For volumious data dumps (default off).
+	lager.Panic().MMap(...) // Calls panic(), always enabled.
+	lager.Exit().MMap(...)  // To Stderr, calls os.Exit(1), always enabled.
+	lager.Fail().MMap(...)  // For non-normal failures (default on).
+	lager.Warn().MMap(...)  // For warnings (default on).
+	lager.Note().MMap(...)  // For normal, important notices (default on).
+	lager.Acc().MMap(...)   // For access logs (default on).
+	lager.Info().MMap(...)  // For normal events (default off).
+	laber.Trace().MMap(...) // For tracing code flow (default off).
+	laber.Debug().MMap(...) // For debugging details (default off).
+	laber.Obj().MMap(....)  // For object dumps (default off).
+	lager.Guts().MMap(...)  // For volumious data dumps (default off).
 
-The Panic and Exit levels cannot be disabled.  Of the others, only Fail, Warn,
-Note, and Acc levels are enabled by default.  When the Lager module is
-initialized, the following code is called:
-
-	lager.Init(os.Getenv("LAGER_LEVELS"))
-
-and lager.Init("") is the same as lager.Init("Fail Warn Note Acc") [which is
-the same as lager.Init("FWNA")].  So you can set the LAGER_LEVELS environment
-variable to change which log levels are enabled.  Application code can also
-choose to support other ways to override those defaults.
+Panic and Exit cannot be disabled.  Fail, Warn, Note, and Acc are enabled by
+default.
 
 If you want to decorate each log line with additional key/value pairs, then
 you can accumulate those in a context.Context value that gets passed around
@@ -52,30 +64,21 @@ and then pass that Context in when logging:
 	ctx = lager.AddPairs(ctx, "srcIP", ip, "user", username)
 
 	// In a method or code that a method calls, for example:
-	lager.Info(ctx).Map(pairs...)
+	lager.Info(ctx).MMap(msg, pairs...)
 
 	// Or, if you have multiple log lines at the same level:
 	debug := lager.Debug(ctx)
-	debug.Map(pairs...)
-	debug.List(args...)
+	debug.MMap(msg, pairs...)
+	debug.MList(msg, args...)
 
-Most log archiving systems expect JSON log lines to be a hash not a list.
-This is globally enabled by specifying the keys to use for the items that can
-be included in a log line: timestamp, level, single item, list data, context,
-and module.
+Most log archiving systems expect JSON log lines to be a hash (map/object)
+not a list (array).  To get that you just declare what labels to use for:
+timestamp, level, message, list data, context, and module.
 
 	// Example choice of logging keys:
 	lager.Keys("t", "l", "msg", "a", "", "mod")
 
-	// Sample usage of List():
-	lager.Fail(ctx).List("Conn", dest, err)
-	// Example log line from above code:
-	{"t":"2018-12-31 23:59:59.860Z", "l":"FAIL", "a":["Conn", "mx", "reset"]}
-
-	// Sample usage of Map():
-	lager.Warn().Map("Err", err, "for", obj)
-	// Example log line from above code:
-	{"t":"2018-12-31 23:59:59.870Z", "l":"WARN", "Err":"<0", "for":{"cost":-1}}
+Support for GCP CloudTrace is integrated.
 
 */
 package lager
