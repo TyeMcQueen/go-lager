@@ -11,15 +11,15 @@ import (
 
 // based on https://github.com/grpc-ecosystem/go-grpc-middleware/blob/master/logging/zap/payload_interceptors.go
 
-type JsonPbMarshaler interface {
+var (
+	// JSONPbFormatter is the formatter used for formatting protobuf messages as strings.
+	// If needed, this variable can be reassigned with a different formatter with the same Format() signature.
+	JSONPbFormatter JSONPbFormater = &protojson.MarshalOptions{}
+)
+
+type JSONPbFormater interface {
 	Format(m proto.Message) string
 }
-
-var (
-	// JsonPbMarshaller is the marshaller used for serializing protobuf messages.
-	// If needed, this variable can be reassigned with a different marshaller with the same Marshal() signature.
-	JsonPbMarshaller JsonPbMarshaler = &protojson.MarshalOptions{}
-)
 
 type ServerPayloadLoggingDecider func(ctx context.Context, fullMethodName string, servingObject interface{}) bool
 
@@ -28,8 +28,9 @@ func PayloadUnaryServerInterceptor(decider ServerPayloadLoggingDecider) grpc.Una
 		if !decider(ctx, info.FullMethod, info.Server) {
 			return handler(ctx, req)
 		}
-		ctx = lager.AddPairs(ctx, append(serverCallFields(info.FullMethod), TagsToPairs(ctx)...)...)
-		logEntry := lager.Acc(ctx)
+
+		loggerCtx := lager.ContextPairs(ctx).Merge(serverCallFields(info.FullMethod)).Merge(TagsToPairs(ctx)).InContext(ctx)
+		logEntry := lager.Acc(loggerCtx)
 		logProtoMessageAsJSON(logEntry, req, "grpc.request.content", "server request payload logged as grpc.request.content field")
 		resp, err := handler(ctx, req)
 		if err == nil {
@@ -42,6 +43,6 @@ func PayloadUnaryServerInterceptor(decider ServerPayloadLoggingDecider) grpc.Una
 
 func logProtoMessageAsJSON(logger lager.Lager, pbMsg interface{}, key string, msg string) {
 	if p, ok := pbMsg.(proto.Message); ok {
-		logger.MMap(msg, key, JsonPbMarshaller.Format(p))
+		logger.MMap(msg, key, JSONPbFormatter.Format(p))
 	}
 }

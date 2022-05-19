@@ -7,12 +7,12 @@ import (
 	grpc_ctxtags "github.com/grpc-ecosystem/go-grpc-middleware/tags"
 )
 
-func TagsToPairs(ctx context.Context) lager.RawMap {
+func TagsToPairs(ctx context.Context) lager.AMap {
 	tags := grpc_ctxtags.Extract(ctx)
-	var pairs lager.RawMap
+	pairs := lager.AMap(nil)
 
 	for k, v := range tags.Values() {
-		pairs = append(pairs, k, v)
+		pairs.AddPairs(k, v)
 	}
 
 	return pairs
