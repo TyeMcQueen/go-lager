@@ -353,7 +353,7 @@ func GcpContextReceivedRequest(
 		if proj, err := GcpProjectID(nil); nil != err {
 			Fail(ctx).MMap("Could not get GCP Project ID", "err", err)
 		} else { // Can't write new spans; just do read-only span operations:
-			span = spans.NewRoSpan(proj)
+			span = spans.NewROSpan(proj)
 		}
 	}
 	if nil != span {
