@@ -1,4 +1,2 @@
 github.com/TyeMcQueen/go-tutl v1.1.0 h1:KJzcCmr+QdYSZbpF0rV/LE+FZpnHEozo0/SFKLXfIus=
 github.com/TyeMcQueen/go-tutl v1.1.0/go.mod h1:nW7zRt1PqznqPaES2UHtn9LjHis4KQG58b1MAlB+SWA=
-github.com/TyeMcQueen/tools-gcp/trace/spans v0.0.0-20220517201613-312791ef81a4 h1:N82/9Ngmm61VS/6Q7ovRfuSKzWUckxeUEnTAiDFaWnA=
-github.com/TyeMcQueen/tools-gcp/trace/spans v0.0.0-20220517201613-312791ef81a4/go.mod h1:0bHrrGLUOyUEWY1cmEqdcTJiLV9MgWJGQ7zG08yz2/M=

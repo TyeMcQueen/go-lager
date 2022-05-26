@@ -10,7 +10,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/TyeMcQueen/tools-gcp/trace/spans"
+	"github.com/TyeMcQueen/go-lager/gcp-spans"
 )
 
 const GcpSpanKey = "logging.googleapis.com/spanId"
