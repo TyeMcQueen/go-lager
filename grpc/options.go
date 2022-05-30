@@ -24,7 +24,7 @@ type options struct {
 	levelFunc       CodeToLevel
 	shouldLog       grpc_logging.Decider
 	codeFunc        grpc_logging.ErrorToCode
-	durationFunc    DurationToField
+	durationFunc    DurationToPairs
 	messageFunc     MessageProducer
 	timestampFormat string
 }
@@ -45,8 +45,8 @@ type Option func(*options)
 // CodeToLevel function defines the mapping between gRPC return codes and interceptor log level.
 type CodeToLevel func(code codes.Code) byte
 
-// DurationToField function defines how to produce duration fields for logging
-type DurationToField func(duration time.Duration) lager.AMap
+// DurationToPairs function defines how to produce duration fields for logging
+type DurationToPairs func(duration time.Duration) lager.AMap
 
 // WithDecider customizes the function for deciding if the gRPC interceptor logs should log.
 func WithDecider(f grpc_logging.Decider) Option {
@@ -69,8 +69,8 @@ func WithCodes(f grpc_logging.ErrorToCode) Option {
 	}
 }
 
-// WithDurationField customizes the function for mapping request durations to Zap fields.
-func WithDurationField(f DurationToField) Option {
+// WithDurationField customizes the function for mapping request durations to Lager pairs.
+func WithDurationField(f DurationToPairs) Option {
 	return func(o *options) {
 		o.durationFunc = f
 	}
@@ -132,18 +132,12 @@ func DefaultCodeToLevel(code codes.Code) byte {
 	}
 }
 
-// DefaultDurationToField is the default implementation of converting request duration to a Zap field.
+// DefaultDurationToField is the default implementation of converting request duration to Lager pairs.
 var DefaultDurationToField = DurationToTimeMillisField
 
 // DurationToTimeMillisField converts the duration to milliseconds and uses the key `grpc.time_ms`.
 func DurationToTimeMillisField(duration time.Duration) lager.AMap {
 	return lager.Pairs("grpc.time_ms", durationToMilliseconds(duration))
-}
-
-// DurationToDurationField uses a Duration field to log the request duration
-// and leaves it up to Zap's encoder settings to determine how that is output.
-func DurationToDurationField(duration time.Duration) lager.AMap {
-	return lager.Pairs("grpc.duration", duration)
 }
 
 func durationToMilliseconds(duration time.Duration) float32 {
@@ -155,7 +149,7 @@ type MessageProducer func(ctx context.Context, msg string, level byte, code code
 
 // DefaultMessageProducer writes the default message
 func DefaultMessageProducer(ctx context.Context, msg string, level byte, code codes.Code, err error, duration lager.AMap) {
-	// ctx = lager.ContextPairs(ctx).Merge(duration).InContext(ctx)
+	ctx = lager.ContextPairs(ctx).Merge(duration).InContext(ctx)
 	lager.Level(level, ctx).MMap(msg,
 		"grpc.code", code,
 		lager.Unless(nil == err, "error"), err,

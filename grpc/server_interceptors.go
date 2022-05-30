@@ -57,5 +57,5 @@ func serverCallFields(fullMethodString string) *lager.KVPairs {
 	return lager.Pairs(
 		"grpc.service", service,
 		"grpc.method", method,
-	).Merge(SystemField).Merge(SystemField)
+	).Merge(SystemField).Merge(ServerField)
 }
