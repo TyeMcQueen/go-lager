@@ -31,6 +31,9 @@ func GcpProjectID(ctx Ctx) (string, error) {
 		projectID = os.Getenv("GCP_PROJECT_ID")
 	}
 	if "" == projectID {
+		if nil == ctx {
+			ctx = context.Background()
+		}
 		reqCtx, can := context.WithTimeout(ctx, 100*time.Millisecond)
 		defer can()
 		req, err := http.NewRequestWithContext(reqCtx, "GET", projIdUrl, nil)
