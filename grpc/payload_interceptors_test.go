@@ -23,7 +23,7 @@ func TestLagerGrpcPayloadSuite(t *testing.T) {
 	}
 	alwaysLoggingDeciderServer := func(ctx context.Context, fullMethodName string, servingObject interface{}) bool { return true }
 
-	b := newBaseSuite(t)
+	b := newBaseSuite(t, "FWNA")
 
 	b.InterceptorTestSuite.ServerOpts = []grpc.ServerOption{
 		grpc_middleware.WithUnaryServerChain(

@@ -53,10 +53,10 @@ type baseSuite struct {
 	timestampFormat string
 }
 
-func newBaseSuite(t *testing.T) *baseSuite {
+func newBaseSuite(t *testing.T, levels string) *baseSuite {
 	b := &bytes.Buffer{}
 	muB := grpc_testing.NewMutexReadWriter(b)
-	lager.Init("FWNAI")
+	lager.Init(levels)
 	lager.OutputDest = muB
 
 	return &baseSuite{

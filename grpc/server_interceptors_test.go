@@ -50,7 +50,7 @@ func TestLagerGrpcLoggingSuite(t *testing.T) {
 			grpc_lager.WithLevels(customCodeToLevel),
 			grpc_lager.WithTimestampFormat(tcase.timestampFormat),
 		}
-		b := newBaseSuite(t)
+		b := newBaseSuite(t, "FWNAI")
 		b.timestampFormat = tcase.timestampFormat
 		b.InterceptorTestSuite.ServerOpts = []grpc.ServerOption{
 			grpc_middleware.WithUnaryServerChain(
