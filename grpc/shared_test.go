@@ -8,6 +8,8 @@ import (
 	"testing"
 
 	"github.com/TyeMcQueen/go-lager"
+	grpc_lager "github.com/TyeMcQueen/go-lager/grpc"
+
 	grpc_lager_testing "github.com/TyeMcQueen/go-lager/grpc/testing"
 	pb_testproto "github.com/TyeMcQueen/go-lager/grpc/testproto"
 	grpc_ctxtags "github.com/grpc-ecosystem/go-grpc-middleware/tags"
@@ -24,10 +26,9 @@ type loggingPingService struct {
 
 func (s *loggingPingService) Ping(ctx context.Context, ping *pb_testproto.PingRequest) (*pb_testproto.PingResponse, error) {
 	grpc_ctxtags.Extract(ctx).Set("custom_tags.string", "something").Set("custom_tags.int", 1337)
-	lager.AddPairs(ctx, "custom_field", "custom_value")
-	// lager.
-	// ctxzap.AddFields(ctx, zap.String("custom_field", "custom_value"))
-	// ctxzap.Extract(ctx).Info("some ping")
+	ctx = lager.AddPairs(ctx, "custom_field", "custom_value")
+	grpc_lager.Extract(ctx, 'I').MMap("some ping")
+
 	return s.TestServiceServer.Ping(ctx, ping)
 }
 
@@ -47,13 +48,12 @@ func (s *loggingPingService) PingError(ctx context.Context, ping *pb_testproto.P
 
 type baseSuite struct {
 	*grpc_lager_testing.InterceptorTestSuite
-	mutexBuffer *grpc_testing.MutexReadWriter
-	buffer      *bytes.Buffer
+	mutexBuffer     *grpc_testing.MutexReadWriter
+	buffer          *bytes.Buffer
+	timestampFormat string
 }
 
 func newBaseSuite(t *testing.T) *baseSuite {
-	// os.Setenv("LAGER_LEVELS", "FWNAI")
-
 	b := &bytes.Buffer{}
 	muB := grpc_testing.NewMutexReadWriter(b)
 	lager.Init("FWNAI")

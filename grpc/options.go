@@ -136,7 +136,7 @@ func DefaultCodeToLevel(code codes.Code) byte {
 var DefaultDurationToField = DurationToTimeMillisField
 
 // DurationToTimeMillisField converts the duration to milliseconds and uses the key `grpc.time_ms`.
-func DurationToTimeMillisField(duration time.Duration) lager.AMap {
+func DurationToTimeMillisField(duration time.Duration) *lager.KVPairs {
 	return lager.Pairs("grpc.time_ms", durationToMilliseconds(duration))
 }
 
@@ -145,11 +145,11 @@ func durationToMilliseconds(duration time.Duration) float32 {
 }
 
 // MessageProducer produces a user defined log message
-type MessageProducer func(ctx context.Context, msg string, level byte, code codes.Code, err error, duration lager.AMap)
+type MessageProducer func(ctx context.Context, msg string, level byte, code codes.Code, err error, duration *lager.KVPairs)
 
 // DefaultMessageProducer writes the default message
-func DefaultMessageProducer(ctx context.Context, msg string, level byte, code codes.Code, err error, duration lager.AMap) {
-	ctx = lager.ContextPairs(ctx).Merge(duration).InContext(ctx)
+func DefaultMessageProducer(ctx context.Context, msg string, level byte, code codes.Code, err error, duration *lager.KVPairs) {
+	ctx = lager.ContextPairs(TagsToPairs(ctx)).Merge(duration).InContext(ctx)
 	lager.Level(level, ctx).MMap(msg,
 		"grpc.code", code,
 		lager.Unless(nil == err, "error"), err,

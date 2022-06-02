@@ -13,10 +13,10 @@ import (
 
 var (
 	// SystemField is used in every log statement made through grpc_lager. Can be overwritten before any initialization code.
-	SystemField = lager.Pairs("system", "grpc")
+	SystemField = "grpc"
 
 	// ServerField is used in every server-side log statement made through grpc_lager. Can be overwritten before initialization.
-	ServerField = lager.Pairs("span.kind", "server")
+	ServerField = "server"
 )
 
 func UnaryServerInterceptor(opts ...Option) grpc.UnaryServerInterceptor {
@@ -25,9 +25,9 @@ func UnaryServerInterceptor(opts ...Option) grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 		startTime := time.Now()
 
-		newCtx := newContextForCall(ctx, info.FullMethod, startTime, o.timestampFormat)
+		ctx = newContextForCall(ctx, info.FullMethod, startTime, o.timestampFormat)
 
-		resp, err := handler(newCtx, req)
+		resp, err := handler(ctx, req)
 		if !o.shouldLog(info.FullMethod, err) {
 			return resp, err
 		}
@@ -35,19 +35,19 @@ func UnaryServerInterceptor(opts ...Option) grpc.UnaryServerInterceptor {
 		level := o.levelFunc(code)
 		duration := o.durationFunc(time.Since(startTime))
 
-		o.messageFunc(newCtx, "finished unary call with code "+code.String(), level, code, err, duration)
+		o.messageFunc(ctx, "finished unary call with code "+code.String(), level, code, err, duration)
 
 		return resp, err
 	}
 }
 
 func newContextForCall(ctx context.Context, fullMethodString string, start time.Time, timestampFormat string) context.Context {
-	pairs := lager.Pairs("grpc.start_time", start.Format(timestampFormat))
+	ctx = lager.AddPairs(ctx, "grpc.start_time", start.Format(timestampFormat))
 	if d, ok := ctx.Deadline(); ok {
-		pairs.AddPairs("grpc.request.deadline", d.Format(timestampFormat))
+		ctx = lager.AddPairs(ctx, "grpc.request.deadline", d.Format(timestampFormat))
 	}
 
-	return lager.ContextPairs(ctx).Merge(pairs).Merge(serverCallFields(fullMethodString)).InContext(ctx)
+	return lager.ContextPairs(ctx).Merge(serverCallFields(fullMethodString)).InContext(ctx)
 }
 
 func serverCallFields(fullMethodString string) *lager.KVPairs {
@@ -57,5 +57,7 @@ func serverCallFields(fullMethodString string) *lager.KVPairs {
 	return lager.Pairs(
 		"grpc.service", service,
 		"grpc.method", method,
-	).Merge(SystemField).Merge(ServerField)
+		"system", SystemField,
+		"span.kind", ServerField,
+	)
 }

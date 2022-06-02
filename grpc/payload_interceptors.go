@@ -29,7 +29,7 @@ func PayloadUnaryServerInterceptor(decider ServerPayloadLoggingDecider) grpc.Una
 			return handler(ctx, req)
 		}
 
-		loggerCtx := lager.ContextPairs(ctx).Merge(serverCallFields(info.FullMethod)).Merge(TagsToPairs(ctx)).InContext(ctx)
+		loggerCtx := lager.ContextPairs(TagsToPairs(ctx)).Merge(serverCallFields(info.FullMethod)).InContext(ctx)
 		logEntry := lager.Acc(loggerCtx)
 		logProtoMessageAsJSON(logEntry, req, "grpc.request.content", "server request payload logged as grpc.request.content field")
 		resp, err := handler(ctx, req)

@@ -16,7 +16,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-func TestLagerPayloadSuite(t *testing.T) {
+func TestLagerGrpcPayloadSuite(t *testing.T) {
 	if strings.HasPrefix(runtime.Version(), "go1.7") {
 		t.Skipf("Skipping due to json.RawMessage incompatibility with go1.7")
 		return

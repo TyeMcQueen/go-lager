@@ -8,14 +8,21 @@ import (
 )
 
 // TagsToPairs extracts the tags provided by the go-grpc-middleware library from
-// the context and returns a lager map
-func TagsToPairs(ctx context.Context) lager.AMap {
+// the context, adds them to the context as Lager pairs and returns an updated context
+func TagsToPairs(ctx context.Context) context.Context {
 	tags := grpc_ctxtags.Extract(ctx)
-	pairs := lager.AMap(nil)
 
 	for k, v := range tags.Values() {
-		pairs.AddPairs(k, v)
+		ctx = lager.AddPairs(ctx, k, v)
 	}
 
-	return pairs
+	return ctx
+}
+
+// Pass in context and one character from "PEFWNAITDOG" to
+// get a Lager object that has all the grpc_ctxtags updated.
+func Extract(ctx context.Context, lev byte) lager.Lager {
+	ctx = TagsToPairs(ctx)
+
+	return lager.Level(lev, ctx)
 }
