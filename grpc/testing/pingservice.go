@@ -9,7 +9,6 @@ package grpc_lager_testing
 
 import (
 	"context"
-	"io"
 	"testing"
 
 	pb_testproto "github.com/TyeMcQueen/go-lager/grpc/testproto"
@@ -41,31 +40,4 @@ func (s *TestPingService) Ping(ctx context.Context, ping *pb_testproto.PingReque
 func (s *TestPingService) PingError(ctx context.Context, ping *pb_testproto.PingRequest) (*pb_testproto.Empty, error) {
 	code := codes.Code(ping.ErrorCodeReturned)
 	return nil, status.Errorf(code, "Userspace error.")
-}
-
-func (s *TestPingService) PingList(ping *pb_testproto.PingRequest, stream pb_testproto.TestService_PingListServer) error {
-	if ping.ErrorCodeReturned != 0 {
-		return status.Errorf(codes.Code(ping.ErrorCodeReturned), "foobar")
-	}
-	// Send user trailers and headers.
-	for i := 0; i < ListResponseCount; i++ {
-		stream.Send(&pb_testproto.PingResponse{Value: ping.Value, Counter: int32(i)})
-	}
-	return nil
-}
-
-func (s *TestPingService) PingStream(stream pb_testproto.TestService_PingStreamServer) error {
-	count := 0
-	for true {
-		ping, err := stream.Recv()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return err
-		}
-		stream.Send(&pb_testproto.PingResponse{Value: ping.Value, Counter: int32(count)})
-		count += 1
-	}
-	return nil
 }

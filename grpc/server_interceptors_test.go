@@ -26,11 +26,6 @@ func customCodeToLevel(c codes.Code) byte {
 	return level
 }
 
-func getMap(m interface{}) map[string]interface{} {
-	newMap := m.(map[string]interface{})
-	return newMap
-}
-
 func TestLagerGrpcLoggingSuite(t *testing.T) {
 	if strings.HasPrefix(runtime.Version(), "go1.7") {
 		t.Skipf("Skipping due to json.RawMessage incompatibility with go1.7")
@@ -150,83 +145,49 @@ func (s *serverSuite) TestPingError_WithCustomLevels() {
 	}
 }
 
-// func (s *serverSuite) TestPingList_WithCustomTags() {
-// 	stream, err := s.Client.PingList(s.SimpleCtx(), goodPing)
-// 	require.NoError(s.T(), err, "should not fail on establishing the stream")
-// 	for {
-// 		_, err := stream.Recv()
-// 		if err == io.EOF {
-// 			break
-// 		}
-// 		require.NoError(s.T(), err, "reading stream should not fail")
-// 	}
-// 	msgs := s.getOutputJSONs()
-// 	require.Len(s.T(), msgs, 2, "two log statements should be logged")
+func TestLagerGrpcLoggingOverrideSuite(t *testing.T) {
+	if strings.HasPrefix(runtime.Version(), "go1.7") {
+		t.Skip("Skipping due to json.RawMessage incompatibility with go1.7")
+		return
+	}
 
-// 	for _, m := range msgs {
-// 		last := getMap(m[len(m)-1])
-// 		assert.Equal(s.T(), last["grpc.service"], "mwitkow.testproto.TestService", "all lines must contain service name")
-// 		assert.Equal(s.T(), last["grpc.method"], "PingList", "all lines must contain method name")
-// 		assert.Equal(s.T(), last["span.kind"], "server", "all lines must contain the kind of call (server)")
-// 		assert.Equal(s.T(), last["custom_tags.string"], "something", "all lines must contain `custom_tags.string` set by AddFields")
-// 		assert.Equal(s.T(), last["grpc.request.value"], "something", "all lines must contain fields extracted from goodPing because of test.manual_extractfields.pb")
+	opts := []grpc_lager.Option{
+		grpc_lager.WithDurationField(grpc_lager.DurationToDurationField),
+	}
+	b := newBaseSuite(t, "FWNAEIWP")
+	b.InterceptorTestSuite.ServerOpts = []grpc.ServerOption{
+		grpc_middleware.WithUnaryServerChain(
+			grpc_ctxtags.UnaryServerInterceptor(grpc_ctxtags.WithFieldExtractor(grpc_ctxtags.CodeGenRequestFieldExtractor)),
+			grpc_lager.UnaryServerInterceptor(opts...)),
+	}
+	suite.Run(t, &serverOverrideSuite{b})
+}
 
-// 		assert.Contains(s.T(), last, "custom_tags.int", "all lines must contain `custom_tags.int` set by AddFields")
-// 		require.Contains(s.T(), last, "grpc.start_time", "all lines must contain the start time")
-// 		_, err := time.Parse(s.timestampFormat, last["grpc.start_time"].(string))
-// 		assert.NoError(s.T(), err, "should be able to parse start time")
-// 	}
+type serverOverrideSuite struct {
+	*baseSuite
+}
 
-// 	assert.Equal(s.T(), msgs[0][2], "some pinglist", "handler's message must contain user message")
+func (s *serverOverrideSuite) TestPing_HasOverriddenDuration() {
+	_, err := s.Client.Ping(s.SimpleCtx(), goodPing)
+	require.NoError(s.T(), err, "there must be not be an error on a successful call")
+	msgs := s.getOutputJSONs()
+	require.Len(s.T(), msgs, 2, "two log statements should be logged")
 
-// 	assert.Equal(s.T(), msgs[1][2], "finished streaming call with code OK", "handler's message must contain user message")
-// 	assert.Equal(s.T(), msgs[1][1], "info", "OK codes must be logged on info level.")
-// 	assert.Contains(s.T(), getMap(msgs[1][4]), "grpc.time_ms", "interceptor log statement should contain execution time")
-// }
+	for _, m := range msgs {
+		last := getMap(m[len(m)-1])
+		assert.Equal(s.T(), "lager_grpc.testproto.TestService", last["grpc.service"], "all lines must contain service name")
+		assert.Equal(s.T(), "Ping", last["grpc.method"], "all lines must contain method name")
+	}
 
-// func TestZapLoggingOverrideSuite(t *testing.T) {
-// 	if strings.HasPrefix(runtime.Version(), "go1.7") {
-// 		t.Skip("Skipping due to json.RawMessage incompatibility with go1.7")
-// 		return
-// 	}
-// 	opts := []grpc_zap.Option{
-// 		grpc_zap.WithDurationField(grpc_zap.DurationToDurationField),
-// 	}
-// 	b := newBaseZapSuite(t)
-// 	b.InterceptorTestSuite.ServerOpts = []grpc.ServerOption{
-// 		grpc_middleware.WithStreamServerChain(
-// 			grpc_ctxtags.StreamServerInterceptor(),
-// 			grpc_zap.StreamServerInterceptor(b.log, opts...)),
-// 		grpc_middleware.WithUnaryServerChain(
-// 			grpc_ctxtags.UnaryServerInterceptor(),
-// 			grpc_zap.UnaryServerInterceptor(b.log, opts...)),
-// 	}
-// 	suite.Run(t, &zapServerOverrideSuite{b})
-// }
+	assert.Equal(s.T(), "some ping", msgs[0][2], "handler's message must contain user message")
+	assert.NotContains(s.T(), msgs[0], "grpc.time_ms", "handler's message must not contain default duration")
+	assert.NotContains(s.T(), msgs[0], "grpc.duration", "handler's message must not contain overridden duration")
 
-// type zapServerOverrideSuite struct {
-// 	*zapBaseSuite
-// }
-
-// func (s *zapServerOverrideSuite) TestPing_HasOverriddenDuration() {
-// 	_, err := s.Client.Ping(s.SimpleCtx(), goodPing)
-// 	require.NoError(s.T(), err, "there must be not be an error on a successful call")
-// 	msgs := s.getOutputJSONs()
-// 	require.Len(s.T(), msgs, 2, "two log statements should be logged")
-
-// 	for _, m := range msgs {
-// 		assert.Equal(s.T(), m["grpc.service"], "mwitkow.testproto.TestService", "all lines must contain service name")
-// 		assert.Equal(s.T(), m["grpc.method"], "Ping", "all lines must contain method name")
-// 	}
-// 	assert.Equal(s.T(), msgs[0]["msg"], "some ping", "handler's message must contain user message")
-// 	assert.NotContains(s.T(), msgs[0], "grpc.time_ms", "handler's message must not contain default duration")
-// 	assert.NotContains(s.T(), msgs[0], "grpc.duration", "handler's message must not contain overridden duration")
-
-// 	assert.Equal(s.T(), msgs[1]["msg"], "finished unary call with code OK", "handler's message must contain user message")
-// 	assert.Equal(s.T(), msgs[1]["level"], "info", "OK error codes must be logged on info level.")
-// 	assert.NotContains(s.T(), msgs[1], "grpc.time_ms", "handler's message must not contain default duration")
-// 	assert.Contains(s.T(), msgs[1], "grpc.duration", "handler's message must contain overridden duration")
-// }
+	assert.Equal(s.T(), "finished unary call with code OK", msgs[1][2], "handler's message must contain user message")
+	assert.Equal(s.T(), "INFO", msgs[1][1], "OK error codes must be logged on info level.")
+	assert.NotContains(s.T(), getMap(msgs[1][4]), "grpc.time_ms", "handler's message must not contain default duration")
+	assert.Contains(s.T(), getMap(msgs[1][4]), "grpc.duration", "handler's message must contain overridden duration")
+}
 
 // func (s *zapServerOverrideSuite) TestPingList_HasOverriddenDuration() {
 // 	stream, err := s.Client.PingList(s.SimpleCtx(), goodPing)

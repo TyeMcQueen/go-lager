@@ -20,6 +20,11 @@ var (
 	goodPing = &pb_testproto.PingRequest{Value: "something", SleepTimeMs: 9999}
 )
 
+func getMap(m interface{}) map[string]interface{} {
+	newMap := m.(map[string]interface{})
+	return newMap
+}
+
 type loggingPingService struct {
 	pb_testproto.TestServiceServer
 }

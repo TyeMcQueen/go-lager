@@ -21,8 +21,6 @@ type TestServiceClient interface {
 	PingEmpty(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*PingResponse, error)
 	Ping(ctx context.Context, in *PingRequest, opts ...grpc.CallOption) (*PingResponse, error)
 	PingError(ctx context.Context, in *PingRequest, opts ...grpc.CallOption) (*Empty, error)
-	PingList(ctx context.Context, in *PingRequest, opts ...grpc.CallOption) (TestService_PingListClient, error)
-	PingStream(ctx context.Context, opts ...grpc.CallOption) (TestService_PingStreamClient, error)
 }
 
 type testServiceClient struct {
@@ -60,69 +58,6 @@ func (c *testServiceClient) PingError(ctx context.Context, in *PingRequest, opts
 	return out, nil
 }
 
-func (c *testServiceClient) PingList(ctx context.Context, in *PingRequest, opts ...grpc.CallOption) (TestService_PingListClient, error) {
-	stream, err := c.cc.NewStream(ctx, &TestService_ServiceDesc.Streams[0], "/lager_grpc.testproto.TestService/PingList", opts...)
-	if err != nil {
-		return nil, err
-	}
-	x := &testServicePingListClient{stream}
-	if err := x.ClientStream.SendMsg(in); err != nil {
-		return nil, err
-	}
-	if err := x.ClientStream.CloseSend(); err != nil {
-		return nil, err
-	}
-	return x, nil
-}
-
-type TestService_PingListClient interface {
-	Recv() (*PingResponse, error)
-	grpc.ClientStream
-}
-
-type testServicePingListClient struct {
-	grpc.ClientStream
-}
-
-func (x *testServicePingListClient) Recv() (*PingResponse, error) {
-	m := new(PingResponse)
-	if err := x.ClientStream.RecvMsg(m); err != nil {
-		return nil, err
-	}
-	return m, nil
-}
-
-func (c *testServiceClient) PingStream(ctx context.Context, opts ...grpc.CallOption) (TestService_PingStreamClient, error) {
-	stream, err := c.cc.NewStream(ctx, &TestService_ServiceDesc.Streams[1], "/lager_grpc.testproto.TestService/PingStream", opts...)
-	if err != nil {
-		return nil, err
-	}
-	x := &testServicePingStreamClient{stream}
-	return x, nil
-}
-
-type TestService_PingStreamClient interface {
-	Send(*PingRequest) error
-	Recv() (*PingResponse, error)
-	grpc.ClientStream
-}
-
-type testServicePingStreamClient struct {
-	grpc.ClientStream
-}
-
-func (x *testServicePingStreamClient) Send(m *PingRequest) error {
-	return x.ClientStream.SendMsg(m)
-}
-
-func (x *testServicePingStreamClient) Recv() (*PingResponse, error) {
-	m := new(PingResponse)
-	if err := x.ClientStream.RecvMsg(m); err != nil {
-		return nil, err
-	}
-	return m, nil
-}
-
 // TestServiceServer is the server API for TestService service.
 // All implementations must embed UnimplementedTestServiceServer
 // for forward compatibility
@@ -130,8 +65,6 @@ type TestServiceServer interface {
 	PingEmpty(context.Context, *Empty) (*PingResponse, error)
 	Ping(context.Context, *PingRequest) (*PingResponse, error)
 	PingError(context.Context, *PingRequest) (*Empty, error)
-	PingList(*PingRequest, TestService_PingListServer) error
-	PingStream(TestService_PingStreamServer) error
 	mustEmbedUnimplementedTestServiceServer()
 }
 
@@ -147,12 +80,6 @@ func (UnimplementedTestServiceServer) Ping(context.Context, *PingRequest) (*Ping
 }
 func (UnimplementedTestServiceServer) PingError(context.Context, *PingRequest) (*Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method PingError not implemented")
-}
-func (UnimplementedTestServiceServer) PingList(*PingRequest, TestService_PingListServer) error {
-	return status.Errorf(codes.Unimplemented, "method PingList not implemented")
-}
-func (UnimplementedTestServiceServer) PingStream(TestService_PingStreamServer) error {
-	return status.Errorf(codes.Unimplemented, "method PingStream not implemented")
 }
 func (UnimplementedTestServiceServer) mustEmbedUnimplementedTestServiceServer() {}
 
@@ -221,53 +148,6 @@ func _TestService_PingError_Handler(srv interface{}, ctx context.Context, dec fu
 	return interceptor(ctx, in, info, handler)
 }
 
-func _TestService_PingList_Handler(srv interface{}, stream grpc.ServerStream) error {
-	m := new(PingRequest)
-	if err := stream.RecvMsg(m); err != nil {
-		return err
-	}
-	return srv.(TestServiceServer).PingList(m, &testServicePingListServer{stream})
-}
-
-type TestService_PingListServer interface {
-	Send(*PingResponse) error
-	grpc.ServerStream
-}
-
-type testServicePingListServer struct {
-	grpc.ServerStream
-}
-
-func (x *testServicePingListServer) Send(m *PingResponse) error {
-	return x.ServerStream.SendMsg(m)
-}
-
-func _TestService_PingStream_Handler(srv interface{}, stream grpc.ServerStream) error {
-	return srv.(TestServiceServer).PingStream(&testServicePingStreamServer{stream})
-}
-
-type TestService_PingStreamServer interface {
-	Send(*PingResponse) error
-	Recv() (*PingRequest, error)
-	grpc.ServerStream
-}
-
-type testServicePingStreamServer struct {
-	grpc.ServerStream
-}
-
-func (x *testServicePingStreamServer) Send(m *PingResponse) error {
-	return x.ServerStream.SendMsg(m)
-}
-
-func (x *testServicePingStreamServer) Recv() (*PingRequest, error) {
-	m := new(PingRequest)
-	if err := x.ServerStream.RecvMsg(m); err != nil {
-		return nil, err
-	}
-	return m, nil
-}
-
 // TestService_ServiceDesc is the grpc.ServiceDesc for TestService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -288,18 +168,6 @@ var TestService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _TestService_PingError_Handler,
 		},
 	},
-	Streams: []grpc.StreamDesc{
-		{
-			StreamName:    "PingList",
-			Handler:       _TestService_PingList_Handler,
-			ServerStreams: true,
-		},
-		{
-			StreamName:    "PingStream",
-			Handler:       _TestService_PingStream_Handler,
-			ServerStreams: true,
-			ClientStreams: true,
-		},
-	},
+	Streams:  []grpc.StreamDesc{},
 	Metadata: "testping.proto",
 }

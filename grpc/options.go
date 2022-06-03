@@ -140,6 +140,12 @@ func DurationToTimeMillisField(duration time.Duration) *lager.KVPairs {
 	return lager.Pairs("grpc.time_ms", durationToMilliseconds(duration))
 }
 
+// DurationToDurationField uses a Duration field to log the request duration
+// and leaves it up to Lager's encoder settings to determine how that is output.
+func DurationToDurationField(duration time.Duration) *lager.KVPairs {
+	return lager.Pairs("grpc.duration", duration)
+}
+
 func durationToMilliseconds(duration time.Duration) float32 {
 	return float32(duration.Nanoseconds()/1000) / 1000
 }
