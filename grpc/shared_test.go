@@ -9,6 +9,7 @@ import (
 
 	"github.com/TyeMcQueen/go-lager"
 	grpc_lager "github.com/TyeMcQueen/go-lager/grpc"
+	"google.golang.org/grpc/codes"
 
 	grpc_lager_testing "github.com/TyeMcQueen/go-lager/grpc/testing"
 	pb_testproto "github.com/TyeMcQueen/go-lager/grpc/testproto"
@@ -97,4 +98,13 @@ func (s *baseSuite) getOutputJSONs() [][]interface{} {
 	}
 
 	return ret
+}
+
+func StubMessageProducer(ctx context.Context, msg string, level byte, code codes.Code, err error, duration *lager.KVPairs) {
+	// re-extract logger from newCtx, as it may have extra fields that changed in the holder.
+	ctx = lager.ContextPairs(ctx).Merge(duration).InContext(ctx)
+	lager.Level(level, ctx).MMap(msg,
+		"grpc.code", code,
+		lager.Unless(nil == err, "error"), err,
+	)
 }

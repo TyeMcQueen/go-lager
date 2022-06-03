@@ -189,62 +189,31 @@ func (s *serverOverrideSuite) TestPing_HasOverriddenDuration() {
 	assert.Contains(s.T(), getMap(msgs[1][4]), "grpc.duration", "handler's message must contain overridden duration")
 }
 
-// func (s *zapServerOverrideSuite) TestPingList_HasOverriddenDuration() {
-// 	stream, err := s.Client.PingList(s.SimpleCtx(), goodPing)
-// 	require.NoError(s.T(), err, "should not fail on establishing the stream")
-// 	for {
-// 		_, err := stream.Recv()
-// 		if err == io.EOF {
-// 			break
-// 		}
-// 		require.NoError(s.T(), err, "reading stream should not fail")
-// 	}
-// 	msgs := s.getOutputJSONs()
-// 	require.Len(s.T(), msgs, 2, "two log statements should be logged")
-// 	for _, m := range msgs {
-// 		s.T()
-// 		assert.Equal(s.T(), m["grpc.service"], "mwitkow.testproto.TestService", "all lines must contain service name")
-// 		assert.Equal(s.T(), m["grpc.method"], "PingList", "all lines must contain method name")
-// 	}
+func TestLagerGrpcServerOverrideSuppressedSuite(t *testing.T) {
+	if strings.HasPrefix(runtime.Version(), "go1.7") {
+		t.Skip("Skipping due to json.RawMessage incompatibility with go1.7")
+		return
+	}
+	opts := []grpc_lager.Option{
+		grpc_lager.WithDecider(func(method string, err error) bool {
+			if err != nil && method == "/lager_grpc.testproto.TestService/PingError" {
+				return true
+			}
+			return false
+		}),
+	}
+	b := newBaseSuite(t, "FWNAEIWP")
+	b.InterceptorTestSuite.ServerOpts = []grpc.ServerOption{
+		grpc_middleware.WithUnaryServerChain(
+			grpc_ctxtags.UnaryServerInterceptor(grpc_ctxtags.WithFieldExtractor(grpc_ctxtags.CodeGenRequestFieldExtractor)),
+			grpc_lager.UnaryServerInterceptor(opts...)),
+	}
+	suite.Run(t, &serverOverriddenDeciderSuite{b})
+}
 
-// 	assert.Equal(s.T(), msgs[0]["msg"], "some pinglist", "handler's message must contain user message")
-// 	assert.NotContains(s.T(), msgs[0], "grpc.time_ms", "handler's message must not contain default duration")
-// 	assert.NotContains(s.T(), msgs[0], "grpc.duration", "handler's message must not contain overridden duration")
-
-// 	assert.Equal(s.T(), msgs[1]["msg"], "finished streaming call with code OK", "handler's message must contain user message")
-// 	assert.Equal(s.T(), msgs[1]["level"], "info", "OK error codes must be logged on info level.")
-// 	assert.NotContains(s.T(), msgs[1], "grpc.time_ms", "handler's message must not contain default duration")
-// 	assert.Contains(s.T(), msgs[1], "grpc.duration", "handler's message must contain overridden duration")
-// }
-
-// func TestZapServerOverrideSuppressedSuite(t *testing.T) {
-// 	if strings.HasPrefix(runtime.Version(), "go1.7") {
-// 		t.Skip("Skipping due to json.RawMessage incompatibility with go1.7")
-// 		return
-// 	}
-// 	opts := []grpc_zap.Option{
-// 		grpc_zap.WithDecider(func(method string, err error) bool {
-// 			if err != nil && method == "/mwitkow.testproto.TestService/PingError" {
-// 				return true
-// 			}
-// 			return false
-// 		}),
-// 	}
-// 	b := newBaseZapSuite(t)
-// 	b.InterceptorTestSuite.ServerOpts = []grpc.ServerOption{
-// 		grpc_middleware.WithStreamServerChain(
-// 			grpc_ctxtags.StreamServerInterceptor(),
-// 			grpc_zap.StreamServerInterceptor(b.log, opts...)),
-// 		grpc_middleware.WithUnaryServerChain(
-// 			grpc_ctxtags.UnaryServerInterceptor(),
-// 			grpc_zap.UnaryServerInterceptor(b.log, opts...)),
-// 	}
-// 	suite.Run(t, &zapServerOverriddenDeciderSuite{b})
-// }
-
-// type zapServerOverriddenDeciderSuite struct {
-// 	*zapBaseSuite
-// }
+type serverOverriddenDeciderSuite struct {
+	*baseSuite
+}
 
 // func (s *zapServerOverriddenDeciderSuite) TestPing_HasOverriddenDecider() {
 // 	_, err := s.Client.Ping(s.SimpleCtx(), goodPing)
@@ -276,50 +245,26 @@ func (s *serverOverrideSuite) TestPing_HasOverriddenDuration() {
 // 	assert.Equal(s.T(), m["level"], level.String(), msg)
 // }
 
-// func (s *zapServerOverriddenDeciderSuite) TestPingList_HasOverriddenDecider() {
-// 	stream, err := s.Client.PingList(s.SimpleCtx(), goodPing)
-// 	require.NoError(s.T(), err, "should not fail on establishing the stream")
-// 	for {
-// 		_, err := stream.Recv()
-// 		if err == io.EOF {
-// 			break
-// 		}
-// 		require.NoError(s.T(), err, "reading stream should not fail")
-// 	}
-// 	msgs := s.getOutputJSONs()
-// 	require.Len(s.T(), msgs, 1, "single log statements should be logged")
+func TestLagerGrpcLoggingServerMessageProducerSuite(t *testing.T) {
+	if strings.HasPrefix(runtime.Version(), "go1.7") {
+		t.Skip("Skipping due to json.RawMessage incompatibility with go1.7")
+		return
+	}
+	opts := []grpc_lager.Option{
+		grpc_lager.WithMessageProducer(StubMessageProducer),
+	}
+	b := newBaseSuite(t, "FWNAEIWP")
+	b.InterceptorTestSuite.ServerOpts = []grpc.ServerOption{
+		grpc_middleware.WithUnaryServerChain(
+			grpc_ctxtags.UnaryServerInterceptor(grpc_ctxtags.WithFieldExtractor(grpc_ctxtags.CodeGenRequestFieldExtractor)),
+			grpc_lager.UnaryServerInterceptor(opts...)),
+	}
+	suite.Run(t, &serverMessageProducerSuite{b})
+}
 
-// 	assert.Equal(s.T(), msgs[0]["grpc.service"], "mwitkow.testproto.TestService", "all lines must contain service name")
-// 	assert.Equal(s.T(), msgs[0]["grpc.method"], "PingList", "all lines must contain method name")
-// 	assert.Equal(s.T(), msgs[0]["msg"], "some pinglist", "handler's message must contain user message")
-
-// 	assert.NotContains(s.T(), msgs[0], "grpc.time_ms", "handler's message must not contain default duration")
-// 	assert.NotContains(s.T(), msgs[0], "grpc.duration", "handler's message must not contain overridden duration")
-// }
-
-// func TestZapLoggingServerMessageProducerSuite(t *testing.T) {
-// 	if strings.HasPrefix(runtime.Version(), "go1.7") {
-// 		t.Skip("Skipping due to json.RawMessage incompatibility with go1.7")
-// 		return
-// 	}
-// 	opts := []grpc_zap.Option{
-// 		grpc_zap.WithMessageProducer(StubMessageProducer),
-// 	}
-// 	b := newBaseZapSuite(t)
-// 	b.InterceptorTestSuite.ServerOpts = []grpc.ServerOption{
-// 		grpc_middleware.WithStreamServerChain(
-// 			grpc_ctxtags.StreamServerInterceptor(),
-// 			grpc_zap.StreamServerInterceptor(b.log, opts...)),
-// 		grpc_middleware.WithUnaryServerChain(
-// 			grpc_ctxtags.UnaryServerInterceptor(),
-// 			grpc_zap.UnaryServerInterceptor(b.log, opts...)),
-// 	}
-// 	suite.Run(t, &zapServerMessageProducerSuite{b})
-// }
-
-// type zapServerMessageProducerSuite struct {
-// 	*zapBaseSuite
-// }
+type serverMessageProducerSuite struct {
+	*baseSuite
+}
 
 // func (s *zapServerMessageProducerSuite) TestPing_HasOverriddenMessageProducer() {
 // 	_, err := s.Client.Ping(s.SimpleCtx(), goodPing)
