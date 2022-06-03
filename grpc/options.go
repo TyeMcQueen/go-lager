@@ -98,7 +98,7 @@ func DefaultCodeToLevel(code codes.Code) byte {
 	case codes.Canceled:
 		return 'I'
 	case codes.Unknown:
-		return 'E'
+		return 'F'
 	case codes.InvalidArgument:
 		return 'I'
 	case codes.DeadlineExceeded:
@@ -120,15 +120,15 @@ func DefaultCodeToLevel(code codes.Code) byte {
 	case codes.OutOfRange:
 		return 'W'
 	case codes.Unimplemented:
-		return 'E'
+		return 'F'
 	case codes.Internal:
-		return 'E'
+		return 'F'
 	case codes.Unavailable:
 		return 'W'
 	case codes.DataLoss:
-		return 'E'
+		return 'F'
 	default:
-		return 'E'
+		return 'F'
 	}
 }
 

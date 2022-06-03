@@ -7,6 +7,7 @@ import (
 	"time"
 
 	grpc_lager "github.com/TyeMcQueen/go-lager/grpc"
+	pb_testproto "github.com/TyeMcQueen/go-lager/grpc/testproto"
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_ctxtags "github.com/grpc-ecosystem/go-grpc-middleware/tags"
 	"github.com/stretchr/testify/assert"
@@ -19,7 +20,7 @@ import (
 func customCodeToLevel(c codes.Code) byte {
 	if c == codes.Unauthenticated {
 		// Make this a special case for tests, and an error.
-		return 'P'
+		return 'A'
 	}
 	level := grpc_lager.DefaultCodeToLevel(c)
 	return level
@@ -50,7 +51,7 @@ func TestLagerGrpcLoggingSuite(t *testing.T) {
 			grpc_lager.WithLevels(customCodeToLevel),
 			grpc_lager.WithTimestampFormat(tcase.timestampFormat),
 		}
-		b := newBaseSuite(t, "FWNAI")
+		b := newBaseSuite(t, "FWNAEIWP")
 		b.timestampFormat = tcase.timestampFormat
 		b.InterceptorTestSuite.ServerOpts = []grpc.ServerOption{
 			grpc_middleware.WithUnaryServerChain(
@@ -99,56 +100,57 @@ func (s *serverSuite) TestPing_WithCustomTags() {
 	assert.Contains(s.T(), msgs[1][4], "grpc.time_ms", "interceptor log statement should contain execution time")
 }
 
-// func (s *zapServerSuite) TestPingError_WithCustomLevels() {
-// 	for _, tcase := range []struct {
-// 		code  codes.Code
-// 		level zapcore.Level
-// 		msg   string
-// 	}{
-// 		{
-// 			code:  codes.Internal,
-// 			level: zap.ErrorLevel,
-// 			msg:   "Internal must remap to ErrorLevel in DefaultCodeToLevel",
-// 		},
-// 		{
-// 			code:  codes.NotFound,
-// 			level: zap.InfoLevel,
-// 			msg:   "NotFound must remap to InfoLevel in DefaultCodeToLevel",
-// 		},
-// 		{
-// 			code:  codes.FailedPrecondition,
-// 			level: zap.WarnLevel,
-// 			msg:   "FailedPrecondition must remap to WarnLevel in DefaultCodeToLevel",
-// 		},
-// 		{
-// 			code:  codes.Unauthenticated,
-// 			level: zap.DPanicLevel,
-// 			msg:   "Unauthenticated is overwritten to DPanicLevel with customCodeToLevel override, which probably didn't work",
-// 		},
-// 	} {
-// 		s.buffer.Reset()
-// 		_, err := s.Client.PingError(
-// 			s.SimpleCtx(),
-// 			&pb_testproto.PingRequest{Value: "something", ErrorCodeReturned: uint32(tcase.code)})
-// 		require.Error(s.T(), err, "each call here must return an error")
+func (s *serverSuite) TestPingError_WithCustomLevels() {
+	for _, tcase := range []struct {
+		code  codes.Code
+		level string
+		msg   string
+	}{
+		{
+			code:  codes.Internal,
+			level: "FAIL",
+			msg:   "Internal must remap to Fail level in DefaultCodeToLevel",
+		},
+		{
+			code:  codes.NotFound,
+			level: "INFO",
+			msg:   "NotFound must remap to Info level in DefaultCodeToLevel",
+		},
+		{
+			code:  codes.FailedPrecondition,
+			level: "WARN",
+			msg:   "FailedPrecondition must remap to Warn level in DefaultCodeToLevel",
+		},
+		{
+			code:  codes.Unauthenticated,
+			level: "ACCESS",
+			msg:   "Unauthenticated is overwritten to Panic level with customCodeToLevel override, which probably didn't work",
+		},
+	} {
+		s.buffer.Reset()
+		_, err := s.Client.PingError(
+			s.SimpleCtx(),
+			&pb_testproto.PingRequest{Value: "something", ErrorCodeReturned: uint32(tcase.code)})
+		require.Error(s.T(), err, "each call here must return an error")
 
-// 		msgs := s.getOutputJSONs()
-// 		require.Len(s.T(), msgs, 1, "only the interceptor log message is printed in PingErr")
+		msgs := s.getOutputJSONs()
+		require.Len(s.T(), msgs, 1, "only the interceptor log message is printed in PingErr")
 
-// 		m := msgs[0]
-// 		assert.Equal(s.T(), m["grpc.service"], "mwitkow.testproto.TestService", "all lines must contain service name")
-// 		assert.Equal(s.T(), m["grpc.method"], "PingError", "all lines must contain method name")
-// 		assert.Equal(s.T(), m["grpc.code"], tcase.code.String(), "all lines have the correct gRPC code")
-// 		assert.Equal(s.T(), m["level"], tcase.level.String(), tcase.msg)
-// 		assert.Equal(s.T(), m["msg"], "finished unary call with code "+tcase.code.String(), "needs the correct end message")
+		m := msgs[0]
+		last := getMap(m[len(m)-1])
+		assert.Equal(s.T(), "lager_grpc.testproto.TestService", last["grpc.service"], "all lines must contain service name")
+		assert.Equal(s.T(), "PingError", last["grpc.method"], "all lines must contain method name")
+		assert.Equal(s.T(), tcase.code.String(), getMap(m[3])["grpc.code"], "all lines have the correct gRPC code")
+		assert.Equal(s.T(), tcase.level, m[1], tcase.msg)
+		assert.Equal(s.T(), "finished unary call with code "+tcase.code.String(), m[2], "needs the correct end message")
 
-// 		require.Contains(s.T(), m, "grpc.start_time", "all lines must contain the start time")
-// 		_, err = time.Parse(s.timestampFormat, m["grpc.start_time"].(string))
-// 		assert.NoError(s.T(), err, "should be able to parse start time")
-// 	}
-// }
+		require.Contains(s.T(), last, "grpc.start_time", "all lines must contain the start time")
+		_, err = time.Parse(s.timestampFormat, last["grpc.start_time"].(string))
+		assert.NoError(s.T(), err, "should be able to parse start time")
+	}
+}
 
-// func (s *zapServerSuite) TestPingList_WithCustomTags() {
+// func (s *serverSuite) TestPingList_WithCustomTags() {
 // 	stream, err := s.Client.PingList(s.SimpleCtx(), goodPing)
 // 	require.NoError(s.T(), err, "should not fail on establishing the stream")
 // 	for {
@@ -162,23 +164,24 @@ func (s *serverSuite) TestPing_WithCustomTags() {
 // 	require.Len(s.T(), msgs, 2, "two log statements should be logged")
 
 // 	for _, m := range msgs {
-// 		assert.Equal(s.T(), m["grpc.service"], "mwitkow.testproto.TestService", "all lines must contain service name")
-// 		assert.Equal(s.T(), m["grpc.method"], "PingList", "all lines must contain method name")
-// 		assert.Equal(s.T(), m["span.kind"], "server", "all lines must contain the kind of call (server)")
-// 		assert.Equal(s.T(), m["custom_tags.string"], "something", "all lines must contain `custom_tags.string` set by AddFields")
-// 		assert.Equal(s.T(), m["grpc.request.value"], "something", "all lines must contain fields extracted from goodPing because of test.manual_extractfields.pb")
+// 		last := getMap(m[len(m)-1])
+// 		assert.Equal(s.T(), last["grpc.service"], "mwitkow.testproto.TestService", "all lines must contain service name")
+// 		assert.Equal(s.T(), last["grpc.method"], "PingList", "all lines must contain method name")
+// 		assert.Equal(s.T(), last["span.kind"], "server", "all lines must contain the kind of call (server)")
+// 		assert.Equal(s.T(), last["custom_tags.string"], "something", "all lines must contain `custom_tags.string` set by AddFields")
+// 		assert.Equal(s.T(), last["grpc.request.value"], "something", "all lines must contain fields extracted from goodPing because of test.manual_extractfields.pb")
 
-// 		assert.Contains(s.T(), m, "custom_tags.int", "all lines must contain `custom_tags.int` set by AddFields")
-// 		require.Contains(s.T(), m, "grpc.start_time", "all lines must contain the start time")
-// 		_, err := time.Parse(s.timestampFormat, m["grpc.start_time"].(string))
+// 		assert.Contains(s.T(), last, "custom_tags.int", "all lines must contain `custom_tags.int` set by AddFields")
+// 		require.Contains(s.T(), last, "grpc.start_time", "all lines must contain the start time")
+// 		_, err := time.Parse(s.timestampFormat, last["grpc.start_time"].(string))
 // 		assert.NoError(s.T(), err, "should be able to parse start time")
 // 	}
 
-// 	assert.Equal(s.T(), msgs[0]["msg"], "some pinglist", "handler's message must contain user message")
+// 	assert.Equal(s.T(), msgs[0][2], "some pinglist", "handler's message must contain user message")
 
-// 	assert.Equal(s.T(), msgs[1]["msg"], "finished streaming call with code OK", "handler's message must contain user message")
-// 	assert.Equal(s.T(), msgs[1]["level"], "info", "OK codes must be logged on info level.")
-// 	assert.Contains(s.T(), msgs[1], "grpc.time_ms", "interceptor log statement should contain execution time")
+// 	assert.Equal(s.T(), msgs[1][2], "finished streaming call with code OK", "handler's message must contain user message")
+// 	assert.Equal(s.T(), msgs[1][1], "info", "OK codes must be logged on info level.")
+// 	assert.Contains(s.T(), getMap(msgs[1][4]), "grpc.time_ms", "interceptor log statement should contain execution time")
 // }
 
 // func TestZapLoggingOverrideSuite(t *testing.T) {
