@@ -215,35 +215,36 @@ type serverOverriddenDeciderSuite struct {
 	*baseSuite
 }
 
-// func (s *zapServerOverriddenDeciderSuite) TestPing_HasOverriddenDecider() {
-// 	_, err := s.Client.Ping(s.SimpleCtx(), goodPing)
-// 	require.NoError(s.T(), err, "there must be not be an error on a successful call")
-// 	msgs := s.getOutputJSONs()
-// 	require.Len(s.T(), msgs, 1, "single log statements should be logged")
+func (s *serverOverriddenDeciderSuite) TestPing_HasOverriddenDecider() {
+	_, err := s.Client.Ping(s.SimpleCtx(), goodPing)
+	require.NoError(s.T(), err, "there must be not be an error on a successful call")
+	msgs := s.getOutputJSONs()
+	require.Len(s.T(), msgs, 1, "single log statements should be logged")
 
-// 	assert.Equal(s.T(), msgs[0]["grpc.service"], "mwitkow.testproto.TestService", "all lines must contain service name")
-// 	assert.Equal(s.T(), msgs[0]["grpc.method"], "Ping", "all lines must contain method name")
-// 	assert.Equal(s.T(), msgs[0]["msg"], "some ping", "handler's message must contain user message")
-// }
+	last := getMap(msgs[0][4])
+	assert.Equal(s.T(), "lager_grpc.testproto.TestService", last["grpc.service"], "all lines must contain service name")
+	assert.Equal(s.T(), "Ping", last["grpc.method"], "all lines must contain method name")
+	assert.Equal(s.T(), "some ping", msgs[0][2], "handler's message must contain user message")
+}
 
-// func (s *zapServerOverriddenDeciderSuite) TestPingError_HasOverriddenDecider() {
-// 	code := codes.NotFound
-// 	level := zapcore.InfoLevel
-// 	msg := "NotFound must remap to InfoLevel in DefaultCodeToLevel"
+func (s *serverOverriddenDeciderSuite) TestPingError_HasOverriddenDecider() {
+	code := codes.NotFound
+	msg := "NotFound must remap to InfoLevel in DefaultCodeToLevel"
 
-// 	s.buffer.Reset()
-// 	_, err := s.Client.PingError(
-// 		s.SimpleCtx(),
-// 		&pb_testproto.PingRequest{Value: "something", ErrorCodeReturned: uint32(code)})
-// 	require.Error(s.T(), err, "each call here must return an error")
-// 	msgs := s.getOutputJSONs()
-// 	require.Len(s.T(), msgs, 1, "only the interceptor log message is printed in PingErr")
-// 	m := msgs[0]
-// 	assert.Equal(s.T(), m["grpc.service"], "mwitkow.testproto.TestService", "all lines must contain service name")
-// 	assert.Equal(s.T(), m["grpc.method"], "PingError", "all lines must contain method name")
-// 	assert.Equal(s.T(), m["grpc.code"], code.String(), "all lines must contain the correct gRPC code")
-// 	assert.Equal(s.T(), m["level"], level.String(), msg)
-// }
+	s.buffer.Reset()
+	_, err := s.Client.PingError(
+		s.SimpleCtx(),
+		&pb_testproto.PingRequest{Value: "something", ErrorCodeReturned: uint32(code)})
+	require.Error(s.T(), err, "each call here must return an error")
+	msgs := s.getOutputJSONs()
+	require.Len(s.T(), msgs, 1, "only the interceptor log message is printed in PingErr")
+	m := msgs[0]
+	last := getMap(m[len(m)-1])
+	assert.Equal(s.T(), "lager_grpc.testproto.TestService", last["grpc.service"], "all lines must contain service name")
+	assert.Equal(s.T(), "PingError", last["grpc.method"], "all lines must contain method name")
+	assert.Equal(s.T(), code.String(), getMap(m[3])["grpc.code"], "all lines must contain the correct gRPC code")
+	assert.Equal(s.T(), "INFO", m[1], msg)
+}
 
 func TestLagerGrpcLoggingServerMessageProducerSuite(t *testing.T) {
 	if strings.HasPrefix(runtime.Version(), "go1.7") {
@@ -266,18 +267,19 @@ type serverMessageProducerSuite struct {
 	*baseSuite
 }
 
-// func (s *zapServerMessageProducerSuite) TestPing_HasOverriddenMessageProducer() {
-// 	_, err := s.Client.Ping(s.SimpleCtx(), goodPing)
-// 	require.NoError(s.T(), err, "there must be not be an error on a successful call")
-// 	msgs := s.getOutputJSONs()
-// 	require.Len(s.T(), msgs, 2, "two log statements should be logged")
+func (s *serverMessageProducerSuite) TestPing_HasOverriddenMessageProducer() {
+	_, err := s.Client.Ping(s.SimpleCtx(), goodPing)
+	require.NoError(s.T(), err, "there must be not be an error on a successful call")
+	msgs := s.getOutputJSONs()
+	require.Len(s.T(), msgs, 2, "two log statements should be logged")
 
-// 	for _, m := range msgs {
-// 		assert.Equal(s.T(), m["grpc.service"], "mwitkow.testproto.TestService", "all lines must contain service name")
-// 		assert.Equal(s.T(), m["grpc.method"], "Ping", "all lines must contain method name")
-// 	}
-// 	assert.Equal(s.T(), msgs[0]["msg"], "some ping", "handler's message must contain user message")
+	for _, m := range msgs {
+		last := getMap(m[len(m)-1])
+		assert.Equal(s.T(), "lager_grpc.testproto.TestService", last["grpc.service"], "all lines must contain service name")
+		assert.Equal(s.T(), "Ping", last["grpc.method"], "all lines must contain method name")
+	}
+	assert.Equal(s.T(), "some ping", msgs[0][2], "handler's message must contain user message")
 
-// 	assert.Equal(s.T(), msgs[1]["msg"], "custom message", "handler's message must contain user message")
-// 	assert.Equal(s.T(), msgs[1]["level"], "info", "OK error codes must be logged on info level.")
-// }
+	assert.Equal(s.T(), "custom message", msgs[1][2], "handler's message must contain user message")
+	assert.Equal(s.T(), "INFO", msgs[1][1], "OK error codes must be logged on info level.")
+}

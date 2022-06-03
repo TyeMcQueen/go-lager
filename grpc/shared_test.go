@@ -103,7 +103,7 @@ func (s *baseSuite) getOutputJSONs() [][]interface{} {
 func StubMessageProducer(ctx context.Context, msg string, level byte, code codes.Code, err error, duration *lager.KVPairs) {
 	// re-extract logger from newCtx, as it may have extra fields that changed in the holder.
 	ctx = lager.ContextPairs(ctx).Merge(duration).InContext(ctx)
-	lager.Level(level, ctx).MMap(msg,
+	lager.Level(level, ctx).MMap("custom message",
 		"grpc.code", code,
 		lager.Unless(nil == err, "error"), err,
 	)
