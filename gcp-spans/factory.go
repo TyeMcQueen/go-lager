@@ -40,18 +40,18 @@ type ROSpan struct {
 //
 type Factory interface {
 
-	// GetProjectID() retuns the GCP Project ID (which is not the Project
+	// GetProjectID() returns the GCP Project ID (which is not the Project
 	// Number) for which spans will be registered.
 	//
 	GetProjectID() string
 
-	// GetTraceID() retuns "" if the factory is empty.  Otherwise it returns
+	// GetTraceID() returns "" if the factory is empty.  Otherwise it returns
 	// the trace ID of the contained span (which will not be "" nor a
 	// hexadecimal representation of 0).
 	//
 	GetTraceID() string
 
-	// GetSpanID() retuns 0 if the factory is empty.  Otherwise it returns
+	// GetSpanID() returns 0 if the factory is empty.  Otherwise it returns
 	// the span ID of the contained span (which will not be 0).
 	//
 	GetSpanID() uint64
@@ -126,13 +126,15 @@ type Factory interface {
 	//
 	SetIsClient()
 
-	// Sets the span kind to "PRODUCER".  Does nothing except log a failure
-	// with a stack trace if the factory is empty.
+	// Sets the span kind to "PRODUCER" (the term used for a process that
+	// asynchronously publishes data like with pub/sub).  Does nothing
+	// except log a failure with a stack trace if the factory is empty.
 	//
 	SetIsPublisher()
 
-	// Sets the span kind to "CONSUMER".  Does nothing except log a failure
-	// with a stack trace if the factory is empty.
+	// Sets the span kind to "CONSUMER" (the term used for a process that
+	// asynchronously receives data like a pub/sub subscriber).  Does nothing
+	// except log a failure with a stack trace if the factory is empty.
 	//
 	SetIsSubscriber()
 
@@ -240,7 +242,7 @@ func (s *ROSpan) SetSpanID(spanID uint64) {
 	s.spanID = spanID
 }
 
-// GetProjectID() retuns the GCP Project ID.
+// GetProjectID() returns the GCP Project ID.
 func (s ROSpan) GetProjectID() string {
 	return s.proj
 }
