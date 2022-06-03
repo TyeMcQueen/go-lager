@@ -303,9 +303,11 @@ func (s ROSpan) Import(traceID string, spanID uint64) (Factory, error) {
 
 func (s ROSpan) ImportFromHeaders(headers http.Header) Factory {
 	parts := strings.Split(headers.Get(TraceHeader), "/")
-	spanID, _ := strconv.ParseUint(parts[1], 10, 64)
-	if im, _ := s.Import(parts[0], spanID); nil != im {
-		return im
+	if 2 == len(parts) {
+		spanID, _ := strconv.ParseUint(parts[1], 10, 64)
+		if im, _ := s.Import(parts[0], spanID); nil != im {
+			return im
+		}
 	}
 	return ROSpan{proj: s.proj}
 }
