@@ -115,7 +115,7 @@ func (m *Module) Init(levels string) *Module {
 		m.lagers[int(l)] = noop{}
 	}
 	if "" == levels {
-		levels = _globals.enabled
+		levels = getGlobals().enabled
 	}
 	for _, c := range levels {
 		switch c {
@@ -148,7 +148,7 @@ func (m *Module) Init(levels string) *Module {
 func (m *Module) modLevel(lev level, cs ...Ctx) Lager {
 	l := m.lagers[int(lev)]
 	if pReal, ok := l.(*logger); ok {
-		pReal.g = _globals
+		pReal.g = getGlobals()
 	}
 	l = l.With(cs...)
 	return l
