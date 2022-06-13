@@ -57,14 +57,14 @@ func GcpProjectID(ctx Ctx) (string, error) {
 }
 
 // RunningInGcp() tells Lager to log messages in a format that works best
-// when running inside of the Google Cloud Platform (GCP).  You can call
-// it from your main() func so you don't have to set LAGER_GCP=1 in your
-// environment.  Do not call it from an init() function as that can cause
-// a race condition.
+// when running inside of the Google Cloud Platform (when using GCP Cloud
+// Logging).  You can call this so you don't have to set LAGER_GCP=1 in your
+// environment.
 //
-// In particular, it runs:
+// In particular, RunningInGcp() is equivalent to running:
 //
 //      if "" == os.Getenv("LAGER_KEYS") {
+//          // LAGER_KEYS has precedence over LAGER_GCP.
 //          lager.Keys("time", "severity", "message", "data", "", "module")
 //      }
 //      lager.LevelNotation = lager.GcpLevelName

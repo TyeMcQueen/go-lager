@@ -1,12 +1,12 @@
 /*
 Lager makes logs that are easy for computers to parse, easy for people to
 read, and easy for programmers to generate.  It also encourages logging data
-over logging messages, which tends to make logs more useful as well as easier
-for programmers to generate.
+over messages, which tends to make logs more useful as well as easier to
+generate.
 
-You don't need to pass around a logging object.  You can decorate a Go
-context.Context with additional data to be added to each log line written
-when that context applies.
+You don't need to pass around a logging object so you can log information
+from any code.  You can decorate a Go context.Context with additional data
+to be added to each log line written when that context applies.
 
 The logs are written in JSON format but the items in JSON are written in
 a controlled order, preserving the order used in the program code.  This
@@ -18,7 +18,7 @@ Typical logging code like:
 	lager.Fail(ctx).MMap("Can't merge", "dest", dest, "err", err)
 	// MMap() takes a message followed by a map of key/value pairs.
 
-could output:
+could output (especially when running interactively):
 
 	["2019-12-31 23:59:59.1234Z", "FAIL", "Can't merge",
 		{"dest":"localhost", "err":"refused"}]
@@ -38,7 +38,7 @@ items, if it doesn't seem worth it in some cases:
 	lager.Fail(ctx).MList("Can't merge", dest, err)
 	// MList() takes a message followed by arbitrary data items.
 
-There are 11 log levels and 9 can be independently enabled or diabled.  You
+There are 11 log levels and 9 can be independently enabled or disabled.  You
 usually use them via code similar to:
 
 	lager.Panic().MMap(...) // Calls panic(), always enabled.
@@ -71,14 +71,14 @@ and then pass that Context in when logging:
 	debug.MMap(msg, pairs...)
 	debug.MList(msg, args...)
 
-Most log archiving systems expect JSON log lines to be a hash (map/object)
+Most log archiving systems expect JSON log lines to be a map (object/hash)
 not a list (array).  To get that you just declare what labels to use for:
 timestamp, level, message, list data, context, and module.
 
 	// Example choice of logging keys:
 	lager.Keys("t", "l", "msg", "a", "", "mod")
 
-Support for GCP CloudTrace is integrated.
+Support for GCP Cloud Logging and Cloud Trace is integrated.
 
 */
 package lager

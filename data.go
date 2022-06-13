@@ -40,9 +40,10 @@ type RawMap []interface{}
 // A processed list of key/value pairs we can efficiently convert to JSON.
 type AMap = *KVPairs
 
-// Converts an arbitrary value to a string.  Very similar to
-// fmt.Sprintf("%v",arg) but treats []byte values the same as strings
+// S() converts an arbitrary value to a string.  It is very similar to
+// 'fmt.Sprintf("%v", arg)' but treats []byte values the same as strings
 // rather then dumping them as a list of byte values in base 10.
+//
 func S(arg interface{}) string {
 	switch v := arg.(type) {
 	case string:
@@ -53,26 +54,29 @@ func S(arg interface{}) string {
 	return fmt.Sprintf("%v", arg)
 }
 
-// Returns a slice (lager.AList) that can be passed as an argument to another
-// List() or Map() call to construct nested data that can be quickly serialized
-// to JSON.
+// lager.List() returns a slice (lager.AList) that can be passed as an
+// argument to a Lager's [C][M]Map() or [C][M]List() method to construct
+// nested data that can be quickly serialized to JSON.  For example:
 //
-// lager.Info().Map("User", user, "not in", lager.List(one, two, three))
+//      lager.Info().Map("User", u, "not in", lager.List(one, two, three))
+//
 func List(args ...interface{}) AList { return args }
 
-// Returns a raw list of key/value pairs (lager.RawMap) that can be passed as
-// an argument to another List() or Map() call to construct nested data that
-// can be quickly serialized to JSON.
+// lager.Map() returns a raw list of key/value pairs (lager.RawMap) that can
+// be passed as an argument to a Lager's [C][M]Map() or [C][M]List() method
+// to construct nested data that can be quickly serialized to JSON.  I.e.:
+//
+//      lager.Info().List("Using", lager.Map("name", name, "age", age))
 //
 // Dupliate keys all get output.  If you need to squash duplicate keys, then
 // call lager.Pairs() instead.
 //
-// lager.Info(ctx).List("Using", lager.Map("name", name, "age", age))
 func Map(pairs ...interface{}) RawMap { return RawMap(pairs) }
 
-// Returns a (processed) list of key/value pairs (lager.AMap) that can be
-// added to a context.Context to specify additional data to append to each
-// log line.
+// lager.Pairs() returns a (processed) list of key/value pairs (lager.AMap)
+// that can be added to a context.Context to specify additional data to
+// append to each log line.  It can also be used similar to lager.Map().
+//
 func Pairs(pairs ...interface{}) AMap {
 	return AMap(nil).AddPairs(pairs...)
 }
