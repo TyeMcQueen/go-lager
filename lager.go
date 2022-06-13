@@ -15,6 +15,25 @@ import (
 // signatures.  You never need to use lager.Ctx in your code.
 type Ctx = context.Context
 
+// Global values that will soon be protected by atomic.Value.
+type globals struct {
+	// A Lager singleton for each log level (some will be noops).
+	lagers [int(nLevels)]Lager
+
+	// What key strings to use (if any):
+	keys *keyStrs
+
+	// The currently enabled log levels (used in module.go).
+	enabled string
+
+	// TODO: dest io.Writer
+	// TODO: pathParts int
+	// TODO: levDesc func(string) string
+
+	// Add '"json": 1' when jsonPayload.text would become textPayload?
+	inGcp bool
+}
+
 // 'Lager' is the interface returned from lager.Warn() and the other
 // log-level selectors.
 type Lager interface {
@@ -156,21 +175,18 @@ const (
 
 // The 'logger' type is the Lager that actually logs.
 type logger struct {
-	lev level  // Log level
-	kvp AMap   // Extra key/value pairs to append to each log line.
-	mod string // The module name where the log level is en/disabled.
+	lev level    // Log level.
+	kvp AMap     // Extra key/value pairs to append to each log line.
+	mod string   // The module name where the log level is en/disabled.
+	g   *globals // Global configuration at time logger was allocated.
 }
 
 /// GLOBALS ///
 
-// A Lager singleton for each log level (or a noop).
-var _lagers [int(nLevels)]Lager
-
-// What key strings to use (if any):
-var _keys *keyStrs
-
-// The currently enabled log levels (used by module.go).
-var _enabledLevels string
+// Global configuration
+var _globals = &globals{
+	inGcp: "" != os.Getenv("LAGER_GCP"),
+}
 
 // DEPRECATED: The next feature release of Lager will require the use of
 // lager.SetOutput() rather than modifying a global lager.OutputDest.
@@ -182,6 +198,7 @@ var OutputDest io.Writer
 
 // DEPRECATED: The next feature release of Lager will require the use of
 // lager.SetPathParts() rather than modifying a global lager.PathParts.
+// It will also change the default value to 3.
 //
 // 'PathParts' to use when -1 is passed to WithCaller() or WithStack().
 //
@@ -196,8 +213,6 @@ var PathParts = 0
 // it instead defaults to using GcpLevelName().
 //
 var LevelNotation = func(lev string) string { return lev }
-
-var _inGcp = os.Getenv("LAGER_GCP")
 
 var levNames = map[level]string{
 	lPanic: "PANIC",
@@ -216,11 +231,12 @@ var levNames = map[level]string{
 /// FUNCS ///
 
 func init() {
-	_lagers[int(lPanic)] = &logger{lev: lPanic}
-	_lagers[int(lExit)] = &logger{lev: lExit}
+	g := _globals
+	g.lagers[int(lPanic)] = &logger{lev: lPanic}
+	g.lagers[int(lExit)] = &logger{lev: lExit}
 	Init(os.Getenv("LAGER_LEVELS"))
 
-	if "" != _inGcp {
+	if g.inGcp {
 		RunningInGcp()
 	}
 
@@ -245,8 +261,9 @@ func init() {
 // call Init("Fail Warn Note Access Info").
 //
 func Init(levels string) {
+	g := _globals
 	for l := lFail; l <= lGuts; l++ {
-		_lagers[int(l)] = noop{}
+		g.lagers[int(l)] = noop{}
 	}
 	if "" == levels {
 		levels = "FW"
@@ -255,23 +272,23 @@ func Init(levels string) {
 	for _, c := range levels {
 		switch c {
 		case 'F':
-			_lagers[int(lFail)] = &logger{lev: lFail}
+			g.lagers[int(lFail)] = &logger{lev: lFail, g: g}
 		case 'W':
-			_lagers[int(lWarn)] = &logger{lev: lWarn}
+			g.lagers[int(lWarn)] = &logger{lev: lWarn, g: g}
 		case 'N':
-			_lagers[int(lNote)] = &logger{lev: lNote}
+			g.lagers[int(lNote)] = &logger{lev: lNote, g: g}
 		case 'A':
-			_lagers[int(lAcc)] = &logger{lev: lAcc}
+			g.lagers[int(lAcc)] = &logger{lev: lAcc, g: g}
 		case 'I':
-			_lagers[int(lInfo)] = &logger{lev: lInfo}
+			g.lagers[int(lInfo)] = &logger{lev: lInfo, g: g}
 		case 'T':
-			_lagers[int(lTrace)] = &logger{lev: lTrace}
+			g.lagers[int(lTrace)] = &logger{lev: lTrace, g: g}
 		case 'D':
-			_lagers[int(lDebug)] = &logger{lev: lDebug}
+			g.lagers[int(lDebug)] = &logger{lev: lDebug, g: g}
 		case 'O':
-			_lagers[int(lObj)] = &logger{lev: lObj}
+			g.lagers[int(lObj)] = &logger{lev: lObj, g: g}
 		case 'G':
-			_lagers[int(lGuts)] = &logger{lev: lGuts}
+			g.lagers[int(lGuts)] = &logger{lev: lGuts, g: g}
 		default:
 			continue
 		}
@@ -280,7 +297,7 @@ func Init(levels string) {
 			enabled = append(enabled, b)
 		}
 	}
-	_enabledLevels = string(enabled)
+	g.enabled = string(enabled)
 }
 
 // SetOutput() causes Lager to write all logs to the passed-in io.Writer.
@@ -299,6 +316,8 @@ func SetOutput(writer io.Writer) {
 // A 3 adds the directory above that, etc.  A value of 0 (or -1) will include
 // the full path.
 //
+// In the next feature release of Lager, PathParts will default to 3.
+//
 func SetPathParts(pathParts int) {
 	// TODO: write safe version
 	PathParts = pathParts
@@ -315,7 +334,9 @@ func SetLevelNotation(mapper func(string) string) {
 
 // Gets a Lager based on the internal enum for a log level.
 func forLevel(lev level, cs ...Ctx) Lager {
-	return _lagers[int(lev)].With(cs...)
+	g := _globals
+	l := g.lagers[int(lev)].With(cs...)
+	return l
 }
 
 // Panic() returns a Lager object that calls panic(), incorporating pairs
@@ -492,12 +513,12 @@ func (l level) String() string {
 func Keys(when, lev, msg, args, ctx, mod string) {
 	if "" == when && "" == lev && "" == args && "" == mod &&
 		"" == ctx && "" == msg {
-		_keys = nil
+		_globals.keys = nil
 		return
 	} else if "" == when || "" == lev || "" == args || "" == mod {
 		Exit().WithCaller(1).List("Only keys for msg and ctx can be blank")
 	}
-	_keys = &keyStrs{
+	_globals.keys = &keyStrs{
 		when: when, lev: lev, msg: msg, args: args, ctx: ctx, mod: mod,
 	}
 }
@@ -522,6 +543,7 @@ func (l *logger) With(ctxs ...Ctx) Lager {
 // Common opening steps for both List() and Map() methods.
 func (l *logger) start() *buffer {
 	b := bufPool.Get().(*buffer)
+	b.g = l.g
 	switch l.lev {
 	case lPanic, lExit:
 		b.w = os.Stderr
@@ -532,17 +554,17 @@ func (l *logger) start() *buffer {
 		b.w = OutputDest
 	}
 
-	if nil == _keys {
+	if nil == l.g.keys {
 		b.open("[") // ]
 	} else {
 		b.open("{") // }
-		b.quote(_keys.when)
+		b.quote(l.g.keys.when)
 		b.colon()
 	}
 	b.timestamp()
 
-	if nil != _keys {
-		b.quote(_keys.lev)
+	if nil != l.g.keys {
+		b.quote(l.g.keys.lev)
 		b.colon()
 	}
 	b.scalar(LevelNotation(l.lev.String()))
@@ -552,23 +574,23 @@ func (l *logger) start() *buffer {
 
 // Common closing steps for both List() and Map() methods.
 func (l *logger) end(b *buffer) {
-	if nil == _keys {
+	if nil == l.g.keys {
 		b.scalar(l.kvp)
-	} else if "" == _keys.ctx {
+	} else if "" == l.g.keys.ctx {
 		b.pairs(l.kvp)
 	} else {
-		b.pair(_keys.ctx, l.kvp)
+		b.pair(l.g.keys.ctx, l.kvp)
 	}
 
 	if "" != l.mod {
-		if nil == _keys {
+		if nil == l.g.keys {
 			b.quote("mod=" + l.mod)
 		} else {
-			b.pair(_keys.mod, l.mod)
+			b.pair(l.g.keys.mod, l.mod)
 		}
 	}
 
-	if nil == _keys { // [
+	if nil == l.g.keys { // [
 		b.close("]\n")
 	} else { // {
 		b.close("}\n")
@@ -592,15 +614,15 @@ func (l *logger) Println(args ...interface{}) { l.List(args...) }
 // See the Lager interface for documentation.
 func (l *logger) List(args ...interface{}) {
 	b := l.start()
-	if nil == _keys {
+	if nil == l.g.keys {
 		b.scalar(args)
-	} else if 1 == len(args) && "" != _keys.msg {
-		b.pair(_keys.msg, args[0])
-		if "" != _inGcp && (nil == l.kvp || 0 == len(l.kvp.keys)) {
+	} else if 1 == len(args) && "" != l.g.keys.msg {
+		b.pair(l.g.keys.msg, args[0])
+		if l.g.inGcp && (nil == l.kvp || 0 == len(l.kvp.keys)) {
 			b.pair("json", 1) // Keep jsonPayload.message not textPayload
 		}
 	} else {
-		b.pair(_keys.args, args)
+		b.pair(l.g.keys.args, args)
 	}
 	l.end(b)
 }
@@ -608,25 +630,25 @@ func (l *logger) List(args ...interface{}) {
 // See the Lager interface for documentation.
 func (l *logger) MList(message string, args ...interface{}) {
 	b := l.start()
-	if nil == _keys {
+	if nil == l.g.keys {
 		if 0 < len(args) {
 			b.scalar(List(message, args))
 		} else {
 			// Put the single item in a list for sake of consistency:
 			b.scalar(List(message))
 		}
-	} else if "" != _keys.msg {
-		b.pair(_keys.msg, message)
+	} else if "" != l.g.keys.msg {
+		b.pair(l.g.keys.msg, message)
 		if 0 < len(args) {
-			b.pair(_keys.args, args)
-		} else if "" != _inGcp && (nil == l.kvp || 0 == len(l.kvp.keys)) {
+			b.pair(l.g.keys.args, args)
+		} else if l.g.inGcp && (nil == l.kvp || 0 == len(l.kvp.keys)) {
 			b.pair("json", 1) // Keep jsonPayload.message not textPayload
 		}
 	} else if 0 < len(args) {
-		b.pair(_keys.args, List(message, args))
+		b.pair(l.g.keys.args, List(message, args))
 	} else {
 		// Put the single item in a list for sake of consistency:
-		b.pair(_keys.args, List(message))
+		b.pair(l.g.keys.args, List(message))
 	}
 	l.end(b)
 }
@@ -634,7 +656,7 @@ func (l *logger) MList(message string, args ...interface{}) {
 // See the Lager interface for documentation.
 func (l *logger) Map(pairs ...interface{}) {
 	b := l.start()
-	if nil == _keys {
+	if nil == l.g.keys {
 		b.scalar(RawMap(pairs))
 	} else {
 		b.rawPairs(RawMap(pairs))
@@ -645,17 +667,17 @@ func (l *logger) Map(pairs ...interface{}) {
 // See the Lager interface for documentation.
 func (l *logger) MMap(message string, pairs ...interface{}) {
 	b := l.start()
-	if nil == _keys {
+	if nil == l.g.keys {
 		b.scalar(message)
 		b.scalar(RawMap(pairs))
 	} else {
-		key := _keys.msg
+		key := l.g.keys.msg
 		if "" == key {
 			key = "msg"
 		}
 		b.pair(key, message)
 		b.rawPairs(RawMap(pairs))
-		if "" != _inGcp && 0 == len(pairs) &&
+		if l.g.inGcp && 0 == len(pairs) &&
 			(nil == l.kvp || 0 == len(l.kvp.keys)) {
 			b.pair("json", 1) // Keep jsonPayload.message not textPayload
 		}
