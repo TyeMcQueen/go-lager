@@ -9,107 +9,116 @@ import (
 	"strings"
 )
 
-// TYPES //
+/// TYPES ///
 
 // Just an alias for context.Context that takes up less space in function
 // signatures.  You never need to use lager.Ctx in your code.
 type Ctx = context.Context
 
-// The interface returned from lager.Warn() and the other log-level selectors.
+// 'Lager' is the interface returned from lager.Warn() and the other
+// log-level selectors.
 type Lager interface {
-	// Writes a single log line to Stdout in JSON format encoding a UTC time-
-	// stamp followed by the log level and the passed-in values.  For example:
-	//   lager.Warn().List("Timeout", dest, secs)
-	// might output:
-	//   ["2018-12-31 23:59:59.086Z", "WARN", ["Timeout", "dbhost", 5]]
-	// Or logs nothing if the corresponding log level is not enabled.
+	// List() writes a single log line in JSON format including a UTC
+	// timestamp, log level, and the passed-in values.  Or logs nothing if
+	// the corresponding log level is not enabled.
+	//
+	// You may prefer MMap() or MList() if using common log processors.
+	//
 	List(args ...interface{})
 
-	// Same as '.WithCaller(0,-1).List(...)'.  Good to use when your data does
-	// not contain a fairly unique string to search for in the code.
+	// CList() is the same as '.WithCaller(0,-1).List(...)'.
 	CList(args ...interface{})
 
-	// If Keys() have not been set, then acts similar to List().
+	// MList() takes a message string followed by 0 or more arbitrary values.
 	//
-	// If Keys() have been set, then acts similar to:
-	//      Map("msg", message, "args", lager.List(args...))
-	// except the "msg" and "data" keys are taken from the Keys() config.
+	// If Keys() have not been set, then MList() acts similar to List().  If
+	// Keys() have been set, then MList() acts similar to:
 	//
-	// Prefer MList() or List() with a single argument over List() with
-	// multiple arguments if using log parsers that expect to always have
-	// a "message" string (such as GCP logging).  But try to avoid
-	// interpretting data into your message string as this can make
-	// structured logs less useful.
+	//      MMap(message, "data", lager.List(args...))
+	//
+	// except the "data" key is taken from the Keys() config.
+	//
 	MList(message string, args ...interface{})
 
-	// Same as '.WithCaller(0,-1).MList(...)'.
+	// CMList() is the same as '.WithCaller(0,-1).MList(...)'.
 	CMList(message string, args ...interface{})
 
-	// Writes a single log line to Stdout in JSON format encoding a list of
-	// a UTC timestamp (string), the log level (string), and a map composed
-	// of the key/value pairs passed in.  For example:
-	//   lager.Warn().Map("Err", err, "for", obj)
-	// might output:
-	//   ["2018-12-31 23:59:59.086Z", "WARN", {"Err":"no cost", "for":{"c":-1}}]
-	// Or logs nothing if the corresponding log level is not enabled.
+	// Map() takes a list of key/value pairs and writes a single log line in
+	// JSON format including a UTC timestamp, the log level, and the
+	// passed-in key/value pairs.  Or logs nothing if the corresponding log
+	// level is not enabled.
+	//
+	// You may prefer MMap() if using common log processors.
+	//
 	Map(pairs ...interface{})
 
-	// Same as '.WithCaller(0,-1).Map(...)'.  Good to use when your data does
-	// not contain a fairly unique string to search for in the code.
+	// CMap() is the same as '.WithCaller(0,-1).Map(...)'.
 	CMap(pairs ...interface{})
 
-	// The same as Map("message", message, pairs...) except instead of using
-	// the hard-coded "message" key, it uses the corresponding key configured
-	// via Keys().
+	// MMap() takes a message string followed by zero or more key/value
+	// pairs.  It is the logging method that is most compatible with the
+	// most log processors.  It acts like:
 	//
-	// Prefer MMap() over Map() if using log parsers that expect to always
-	// have a "message" string (such as GCP logging).
+	//      Map("msg", message, pairs...)
+	//
+	// except the "msg" key is taken from the Keys() config.
+	//
 	MMap(message string, pairs ...interface{})
 
 	// Same as '.WithCaller(0,-1).MMap(...)'.
 	CMMap(message string, pairs ...interface{})
 
-	// Gets a new Lager that adds to each log line the key/value pairs from
-	// zero or more context.Context values.
+	// With() returns a new Lager that adds to each log line the key/value
+	// pairs from zero or more context.Context values.
+	//
 	With(ctxs ...context.Context) Lager
 
-	// Does this Lager log anything?
+	// Enabled() returns 'false' only if this Lager will log nothing.
 	Enabled() bool
 
-	// Adds a "_stack" key/value pair to the logged context.  The value
-	// is a list of strings where each string is a line number (base 10)
-	// followed by a space and then the code file name (shortened to the last
-	// 'pathParts' components).
+	// WithStack() adds a "_stack" key/value pair to the logged context.  The
+	// value is a list of strings where each string is a line number (base
+	// 10) followed by a space and then the code file name (shortened to the
+	// last 'pathParts' components).
 	//
 	// If 'stackLen' is 0 (or negative), then the full stack trace will be
 	// included.  Otherwise, the list will contain at most 'stackLen' strings.
 	// The first string will always be for depth 'minDepth'.
 	//
-	// See WithCaller() for details on usage of 'minDepth' and 'pathParts'.
+	// A 'minDepth' of 0 starts at the line where WithStack() was called and
+	// 1 starts at the line of the caller of the caller of WithStack(), etc.
+	//
+	// See WithCaller() for details on usage 'pathParts'.
+	//
 	WithStack(minDepth, stackLen, pathParts int) Lager
 
-	// Adds "_file" and "_line" key/value pairs to the logged context.
-	// 'depth' of 0 means the line where WithCaller() was called.  'depth'
-	// of 1 would be the line of the caller of the caller of WithCaller().
+	// WithCaller() adds "_file" and "_line" key/value pairs to the logged
+	// context.  A 'depth' of 0 means the line where WithCaller() was called,
+	// and 1 is the line of the caller of the caller of WithCaller(), etc.
 	//
 	// 'pathParts' indicates how many directories to include in the code file
 	// name.  A 0 'pathParts' includes the full path.  A 1 would only include
 	// the file name.  A 2 would include the file name and the deepest sub-
 	// directory name.  A -1 uses the value of lager.PathParts.
+	//
 	WithCaller(depth, pathParts int) Lager
 
 	// The Println() method is provided for minimal compatibility with
 	// log.Logger, as this method is the one most used by other modules.
 	// It is just an alias for the List() method.
+	//
 	Println(...interface{})
 }
 
+// The keys to use when writing logs as a JSON map not a list.
 type keyStrs struct {
 	when, lev, msg, args, ctx, mod string
 }
 
 // A stub Lager that outputs nothing:
-type noop struct{}                               // Also used as "key" for context.Context decoration.
+// Also used as "key" for context.Context decoration.
+type noop struct{}
+
 func (_ noop) List(_ ...interface{})             {}
 func (_ noop) CList(_ ...interface{})            {}
 func (_ noop) MList(_ string, _ ...interface{})  {}
@@ -124,6 +133,7 @@ func (n noop) WithCaller(_, _ int) Lager         { return n }
 func (_ noop) Enabled() bool                     { return false }
 func (_ noop) Println(_ ...interface{})          {}
 
+// The type for internal log levels.
 type level int8
 
 const (
@@ -141,14 +151,14 @@ const (
 	nLevels
 )
 
-// A Lager that actually logs.
+// The 'logger' type is the Lager that actually logs.
 type logger struct {
 	lev level  // Log level
 	kvp AMap   // Extra key/value pairs to append to each log line.
 	mod string // The module name where the log level is en/disabled.
 }
 
-// GLOBALS //
+/// GLOBALS ///
 
 // A Lager singleton for each log level (or a noop).
 var _lagers [int(nLevels)]Lager
@@ -174,7 +184,21 @@ var LevelNotation = func(lev string) string { return lev }
 
 var _inGcp = os.Getenv("LAGER_GCP")
 
-// FUNCS //
+var levNames = map[level]string{
+	lPanic: "PANIC",
+	lExit:  "EXIT",
+	lFail:  "FAIL",
+	lWarn:  "WARN",
+	lNote:  "NOTE",
+	lAcc:   "ACCESS",
+	lInfo:  "INFO",
+	lTrace: "TRACE",
+	lDebug: "DEBUG",
+	lObj:   "OBJ",
+	lGuts:  "GUTS",
+}
+
+/// FUNCS ///
 
 func init() {
 	_lagers[int(lPanic)] = &logger{lev: lPanic}
@@ -190,21 +214,21 @@ func init() {
 		if 6 != len(keys) {
 			Exit().MMap(
 				"LAGER_KEYS expected 6 comma-separated labels",
-				"Not", len(keys), "Value", k,
-			)
+				"Not", len(keys), "Value", k)
 		}
 		Keys(keys[0], keys[1], keys[2], keys[3], keys[4], keys[5])
 	}
 }
 
-// En-/disables log levels.  Pass in a string of letters from "FWNAITDOG" to
-// indicate which log levels should be the only ones that produce output.
-// Each letter is the first letter of a log level (Fail, Warn, Note, Acc,
-// Info, Trace, Debug, Obj, or Guts).   Levels Panic and Exit are always
-// enabled.  Init("") acts like Init("FWNA"), the default setting.  To
-// disable all optional logs, you can use Init("-") as any characters not
-// from "FWNAITDOG" are silently ignored.  So you can also call
-// Init("Fail Warn Note Acc Info").
+// Init() en-/disables log levels.  Pass in a string of letters from
+// "FWNAITDOG" to indicate which log levels should be the only ones that
+// produce output.  Each letter is the first letter of a log level (Fail,
+// Warn, Note, Acc, Info, Trace, Debug, Obj, or Guts).   Levels Panic and
+// Exit are always enabled.  Init("") acts like Init("FWNA"), the default
+// setting.  To disable all optional logs, you can use Init("-") as any
+// characters not from "FWNAITDOG" are silently ignored.  So you can also
+// call Init("Fail Warn Note Access Info").
+//
 func Init(levels string) {
 	for l := lFail; l <= lGuts; l++ {
 		_lagers[int(l)] = noop{}
@@ -244,70 +268,121 @@ func Init(levels string) {
 	_enabledLevels = string(enabled)
 }
 
+// Gets a Lager based on the internal enum for a log level.
 func forLevel(lev level, cs ...Ctx) Lager {
 	return _lagers[int(lev)].With(cs...)
 }
 
-// Returns a Lager object that calls panic().  The JSON log line is first
-// output to os.Stderr and then
-//    panic("lager.Panic() logged (see above)")
-// is called.
+// Panic() returns a Lager object that calls panic(), incorporating pairs
+// from any contexts passed in.  The JSON is output to os.Stderr and then
+//
+//      panic("lager.Panic() logged (see above)")
+//
+// is called.  Holding on to the returned object may ignore future config
+// updates.
+//
 func Panic(cs ...Ctx) Lager { return forLevel(lPanic, cs...) }
 
-// Returns a Lager object that writes to os.Stderr then calls os.Exit(1).
+// Exit() returns a Lager object that writes to os.Stderr, incorporating
+// pairs from any contexts passed in, then calls os.Exit(1).  Holding
+// on to the returned object may ignore future config updates.
+//
 // This log level is often called "Fatal" but loggers are inconsistent as to
 // whether logging at the Fatal level causes the process to exit.  By naming
 // this level Exit, that ambiguity is removed.
+//
+// Exit() should only be used during process initialization as os.Exit()
+// will prevent any 'defer'ed clean-up operations from running.
+//
 func Exit(cs ...Ctx) Lager { return forLevel(lExit, cs...) }
 
-// Returns a Lager object.  If Fail log level has been disabled, then the
-// returned Lager will be one that does nothing (produces no output).  Use
-// this log level to report errors that are not part of the normal flow.
+// Fail() returns a Lager object.  If the Fail log level has been disabled,
+// then the returned Lager will be one that does nothing (produces no
+// output).  Otherwise it incorporates pairs from any contexts passed in.
+// Holding on to the returned object may ignore future config updates.
+//
+// Use this to report errors that are not part of the normal flow.
+//
 func Fail(cs ...Ctx) Lager { return forLevel(lFail, cs...) }
 
-// Returns a Lager object.  If Warn log level has been disabled, then the
-// returned Lager will be one that does nothing (produces no output).  Use
-// this log level to report unusual conditions that may be signs of problems.
+// Warn() returns a Lager object.  If the Warn log level has been disabled,
+// then the returned Lager will be one that does nothing (produces no
+// output).  Otherwise it incorporates pairs from any contexts passed in.
+// Holding on to the returned object may ignore future config updates.
+//
+// Use this to report unusual conditions that may be signs of problems.
+//
 func Warn(cs ...Ctx) Lager { return forLevel(lWarn, cs...) }
 
-// Returns a Lager object.  If Note log level has been disabled, then the
-// returned Lager will be one that does nothing (produces no output).  Use
-// this log level to report major milestones that are part of normal flow.
+// Note() returns a Lager object.  If the Note log level has been disabled,
+// then the returned Lager will be one that does nothing (produces no
+// output).  Otherwise it incorporates pairs from any contexts passed in.
+// Holding on to the returned object may ignore future config updates.
+//
+// Use this to report major milestones that are part of normal flow.
+//
 func Note(cs ...Ctx) Lager { return forLevel(lNote, cs...) }
 
-// Returns a Lager object.  If Acc log level has been disabled, then the
-// returned Lager will be one that does nothing (produces no output).  Use
-// this log level to write access logs.  The level is recorded as "ACCESS".
+// Acc() returns a Lager object.  If the Acc log level has been disabled,
+// then the returned Lager will be one that does nothing (produces no
+// output).  Otherwise it incorporates pairs from any contexts passed in.
+// Holding on to the returned object may ignore future config updates.
+//
+// Use this to write access logs.  The level is recorded as "ACCESS".
+//
 func Acc(cs ...Ctx) Lager { return forLevel(lAcc, cs...) }
 
-// Returns a Lager object.  If Info log level is not enabled, then the
-// returned Lager will be one that does nothing (produces no output).  Use
-// this log level to report minor milestones that are part of normal flow.
+// Info() returns a Lager object.  If the Info log level is not enabled, then
+// the returned Lager will be one that does nothing (produces no output).
+// Otherwise it incorporates pairs from any contexts passed in.  Holding on
+// to the returned object may ignore future config updates.
+//
+// Use this to report minor milestones that are part of normal flow.
+//
 func Info(cs ...Ctx) Lager { return forLevel(lInfo, cs...) }
 
-// Returns a Lager object.  If Trace log level is not enabled, then the
-// returned Lager will be one that does nothing (produces no output).  Use
-// this log level to trace how execution is flowing through the code.
+// Trace() returns a Lager object.  If the Trace log level is not enabled,
+// then the returned Lager will be one that does nothing (produces no
+// output).  Otherwise it incorporates pairs from any contexts passed in.
+// Holding on to the returned object may ignore future config updates.
+//
+// Use this to trace how execution is flowing through the code.
+//
 func Trace(cs ...Ctx) Lager { return forLevel(lTrace, cs...) }
 
-// Returns a Lager object.  If Debug log level is not enabled, then the
-// returned Lager will be one that does nothing (produces no output).  Use
-// this log level to log important details that may help in debugging.
+// Debug() returns a Lager object.  If the Debug log level is not enabled,
+// then the returned Lager will be one that does nothing (produces no
+// output).  Otherwise it incorporates pairs from any contexts passed in.
+// Holding on to the returned object may ignore future config updates.
+//
+// Use this to log important details that may help in debugging.
+//
 func Debug(cs ...Ctx) Lager { return forLevel(lDebug, cs...) }
 
-// Returns a Lager object.  If Obj log level is not enabled, then the
-// returned Lager will be one that does nothing (produces no output).  Use
-// this log level to log the details of internal data structures.
+// Obj() returns a Lager object.  If the Obj log level is not enabled, then
+// the returned Lager will be one that does nothing (produces no output).
+// Otherwise it incorporates pairs from any contexts passed in.  Holding on
+// to the returned object may ignore future config updates.
+//
+// Use this to log the details of internal data structures.
+//
 func Obj(cs ...Ctx) Lager { return forLevel(lObj, cs...) }
 
-// Returns a Lager object.  If Guts log level is not enabled, then the
-// returned Lager will be one that does nothing (produces no output).  Use
-// this log level for debugging data that is too voluminous to always include
-// when debugging.
+// Guts() returns a Lager object.  If the Guts log level is not enabled, then
+// the returned Lager will be one that does nothing (produces no output).
+// Otherwise it incorporates pairs from any contexts passed in.  Holding on
+// to the returned object may ignore future config updates.
+//
+// Use this for debugging data that is too voluminous to always include when
+// debugging.
+//
 func Guts(cs ...Ctx) Lager { return forLevel(lGuts, cs...) }
 
-// Pass in one character from "PEFWNAITDOG" to get a Lager object that either
-// logs or doesn't, depending on whether the specified log level is enabled.
+// Level() takes one letter from "PEFWNAITDOG" and returns a Lager object
+// that either logs or doesn't, depending on whether the specified log level
+// is enabled, incorporating any key/value pairs from the passed-in contexts.
+// Passing in any other character calls panic().
+//
 func Level(lev byte, cs ...Ctx) Lager {
 	switch lev {
 	case 'P':
@@ -337,20 +412,6 @@ func Level(lev byte, cs ...Ctx) Lager {
 		"Level() must be one char from \"PEFWNAITDOG\" not %q", lev))
 }
 
-var levNames = map[level]string{
-	lPanic: "PANIC",
-	lExit:  "EXIT",
-	lFail:  "FAIL",
-	lWarn:  "WARN",
-	lNote:  "NOTE",
-	lAcc:   "ACCESS",
-	lInfo:  "INFO",
-	lTrace: "TRACE",
-	lDebug: "DEBUG",
-	lObj:   "OBJ",
-	lGuts:  "GUTS",
-}
-
 func (l level) String() string {
 	name := levNames[l]
 	if "" != name {
@@ -359,24 +420,27 @@ func (l level) String() string {
 	return fmt.Sprintf("%d", int(l))
 }
 
-// Output each future log line as a JSON hash ("object") using the given keys.
-// 'when' is used for the timestamp.  'lev' is used for the log level name.
-// 'msg' is either "" or will be used when a single argument is passed to
-// List().  'msg' is also used for the first argument to MMap() and MList().
-// 'args' is used for the arguments to List() when 'msg' is not.  'mod' is
-// used for the module name (if any).
+// Keys() provides keys to be used to write each JSON log line as a map
+// (object or hash) instead of as a list (array).
 //
-// 'ctx' is used for the hash context values (if any).  Specify "" for 'ctx'
-// to have any context key/value pairs included in-line in the top-level JSON
-// hash.  In this case, care should be taken to avoid using the same key name
-// both in a context pair and in a pair being passed to, for example, MMap().
-// If you do that, both pairs will be output but anything parsing the log
-// line will only record one of the pairs.
+// 'when' is used for the timestamp.  'lev' is used for the log level name.
+// 'msg' is either "" or will be used for the first argument to MMap() or
+// MList() (and similar methods).  'msg' is also used when a single argument
+// is passed to List().  'args' is used for the arguments to List() when
+// 'msg' is not.  'mod' is used for the module name (if any).
+//
+// 'ctx' is used for the key/value pairs added from contexts.  Specify ""
+// for 'ctx' to have any context key/value pairs included in-line in the
+// top-level JSON map.  In this case, care should be taken to avoid using the
+// same key name both in a context pair and in a pair being passed to, for
+// example, MMap().  If you do that, both pairs will be output but anything
+// parsing the log line will only remember one of the pairs.
 //
 // If the environment variable LAGER_KEYS is set it must contain 6 key
-// names separated by commas and those become the default keys to use.
-// Otherwise, if the environment variable LAGER_GCP is not empty, then
-// it is as if you had the following set (among other changes):
+// names separated by commas and those become the keys to use.  Otherwise, if
+// the environment variable LAGER_GCP is not empty, then it is as if you had
+// the following set (among other changes):
+//
 //      LAGER_KEYS="time,severity,message,data,,module"
 //
 // Pass in 6 empty strings to revert to logging a JSON list (array).
@@ -393,8 +457,10 @@ func Keys(when, lev, msg, args, ctx, mod string) {
 	}
 }
 
+// See the Lager interface for documentation.
 func (l *logger) Enabled() bool { return true }
 
+// See the Lager interface for documentation.
 func (l *logger) With(ctxs ...Ctx) Lager {
 	kvp := l.kvp
 	for _, ctx := range ctxs {
@@ -475,10 +541,10 @@ func (l *logger) end(b *buffer) {
 	}
 }
 
-// An alias for List() for minimal compatibility with log.Logger.
+// See the Lager interface for documentation.
 func (l *logger) Println(args ...interface{}) { l.List(args...) }
 
-// Log a list of values (see the Lager interface for more details).
+// See the Lager interface for documentation.
 func (l *logger) List(args ...interface{}) {
 	b := l.start()
 	if nil == _keys {
@@ -494,8 +560,7 @@ func (l *logger) List(args ...interface{}) {
 	l.end(b)
 }
 
-// Log a message string and a list of values (see the Lager interface for
-// more details).
+// See the Lager interface for documentation.
 func (l *logger) MList(message string, args ...interface{}) {
 	b := l.start()
 	if nil == _keys {
@@ -521,7 +586,7 @@ func (l *logger) MList(message string, args ...interface{}) {
 	l.end(b)
 }
 
-// Log a map of key/value pairs (see the Lager interface for more details).
+// See the Lager interface for documentation.
 func (l *logger) Map(pairs ...interface{}) {
 	b := l.start()
 	if nil == _keys {
@@ -532,8 +597,7 @@ func (l *logger) Map(pairs ...interface{}) {
 	l.end(b)
 }
 
-// Log a message string and a map of key/value pairs (see the Lager interface
-// for more details).
+// See the Lager interface for documentation.
 func (l *logger) MMap(message string, pairs ...interface{}) {
 	b := l.start()
 	if nil == _keys {

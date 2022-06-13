@@ -1,41 +1,50 @@
-Lager
-==
+# Lager
 
 Logs (in golang) that are easy for computers to parse, easy for people to
-read, and easy for programmers to generate.  The logs are written in JSON
-format but the order of the data in each line is controlled to make the
-logs quite nice for humans to read even with no processing or tooling.
+read, and easy for programmers to generate.  It also encourages logging data
+over messages, which tends to make logs more useful as well as easier to
+generate.
 
-This is most similar to https://github.com/uber-go/zap and is about as
-efficient in CPU usage and lack of allocations per log line.  But this
-efficiency was not allowed to make it inconvenient to write code that
-uses this library.
+You don't need to pass around a logging object so you can log information
+from any code.  You can decorate a Go context.Context with additional data
+to be added to each log line written when that context applies.
 
-Another departure from most logging systems is that Lager encourages you to
-log data, not messages.  This difference can be a little subtle, but it can
-make it faster to add logging to code while also making it more likely that
-you'll be able to parse out the data you care about from the log rather than
-having to do string matching.
+The logs are written in JSON format but the items in JSON are written in
+a controlled order, preserving the order used in the program code.  This
+makes the logs pretty easy for humans to scan even with no processing or
+tooling.
 
-It also provides more granularity than is typical when controlling which log
-lines to write and which to suppress.  It offers 9 log levels, most of which
-can be enabled individually (enabling "Debug" does not force you to also
-enable "Info").  You can also easily allow separate log levels for specific
-packages or any other logical division you care to use.
+Typical logging code like:
 
-Logging code like:
+    lager.Fail(ctx).MMap("Can't merge", "dest", dest, "err", err)
+    // MMap() takes a message followed by a map of key/value pairs.
 
-    lager.Fail(ctx).Map("Err", err, "for", obj)
+could output (especially when running interactively):
 
-might produce a log line like:
+    ["2019-12-31 23:59:59.1234Z", "FAIL", "Can't merge",
+        {"dest":"localhost", "err":"refused"}]
 
-    ["2018-12-31 23:59:59.870Z", "FAIL", {"Err":"bad cost", "for":{"cost":-1}}]
+(but as a single line).  If you declare that the code is running inside
+Google Cloud Platform (GCP), it could instead output:
 
-Note that the key/value pairs are always logged in the same order you listed
-them in your code.
+    {"time":"2019-12-31T23:59:59.1234Z", "severity":"500",
+        "message":"Can't merge", "dest":"localhost", "err":"refused"}
 
-Forks
-===
+(as a single line) which GCP understands well.  Note that it is still
+easy for a human to read with the consistent order used.
+
+Lager is about as efficient as https://github.com/uber-go/zap or
+https://github.com/rs/zerolog in CPU usage and lack of allocations per log
+line.  But this efficiency was not allowed to make it inconvenient to write
+code that uses Lager.
+
+It also provides more granularity when controlling which log lines to write
+and which to suppress.  It offers 11 log levels, most of which can be enabled
+individually (enabling "Trace" does not force you to also enable "Debug").
+You can also easily allow separate log levels for specific packages or any
+other logical division you care to use.
+
+## Forks
 
 If you use a fork of this repository and want to have changes you make
 accepted upstream, you should use the fork by adding (to go.mod in modules

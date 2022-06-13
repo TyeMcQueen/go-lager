@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-// TYPES //
+/// TYPES ///
 
 // An unshared, temporary structure for efficiently logging one line.
 type buffer struct {
@@ -28,7 +28,7 @@ type Stringer interface {
 	String() string
 }
 
-// GLOBALS //
+/// GLOBALS ///
 
 // Minimize how many of these must be allocated:
 var bufPool = sync.Pool{New: func() interface{} {
@@ -43,7 +43,7 @@ var outMu sync.Mutex
 // The (JSON) delimiter between values:
 const comma = ", "
 
-// FUNCS //
+/// FUNCS ///
 
 var noEsc [256]bool
 var hexDigits = "0123456789abcdef"

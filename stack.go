@@ -24,8 +24,7 @@ func caller(depth, pathparts int) (string, int) {
 	return file, line
 }
 
-// Adds "_file" and "_line" key/value pairs to the logged context.
-// See lager.Lager.WithCaller() documentation above for more details.
+// See the Lager interface for documentation.
 func (l *logger) WithCaller(depth, pathparts int) Lager {
 	file, line := caller(depth, pathparts)
 	if 0 == line {
@@ -36,8 +35,7 @@ func (l *logger) WithCaller(depth, pathparts int) Lager {
 	return &cp
 }
 
-// Adds a "_stack" key/value pair to the logged context.
-// See lager.Lager.WithStack() documentation above for more details.
+// See the Lager interface for documentation.
 func (l *logger) WithStack(minDepth, stackLen, pathparts int) Lager {
 	stack := make([]string, 0)
 	for depth := minDepth; true; depth++ {
@@ -55,22 +53,22 @@ func (l *logger) WithStack(minDepth, stackLen, pathparts int) Lager {
 	return &cp
 }
 
-// Same as '.WithCaller(0,-1).List(...)'.
+// See the Lager interface for documentation.
 func (l *logger) CList(args ...interface{}) {
 	l.WithCaller(1, -1).List(args...)
 }
 
-// Same as '.WithCaller(0,-1).MList(...)'.
+// See the Lager interface for documentation.
 func (l *logger) CMList(message string, args ...interface{}) {
 	l.WithCaller(1, -1).MList(message, args...)
 }
 
-// Same as '.WithCaller(0,-1).Map(...)'.
+// See the Lager interface for documentation.
 func (l *logger) CMap(args ...interface{}) {
 	l.WithCaller(1, -1).Map(args...)
 }
 
-// Same as '.WithCaller(0,-1).MMap(...)'.
+// See the Lager interface for documentation.
 func (l *logger) CMMap(message string, args ...interface{}) {
 	l.WithCaller(1, -1).MMap(message, args...)
 }
