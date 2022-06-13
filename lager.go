@@ -184,6 +184,9 @@ type logger struct {
 	g   *globals // Global configuration at time logger was allocated.
 }
 
+// fakePanic is just used to reliably identify a panic due to lager.Exit().
+type fakePanic string
+
 /// GLOBALS ///
 
 // Global configuration that can be updated even while logging is happening.
@@ -221,6 +224,12 @@ var PathParts = 0
 // it instead defaults to using GcpLevelName().
 //
 var LevelNotation = func(lev string) string { return lev }
+
+// How many 'defer lager.ExitViaPanic()()' calls are waiting.
+var _exiters int32 = 0
+
+// The special value passed to panic() [see ExitViaPanic()].
+var _panicToExit = fakePanic("panic() from lager.Exit()")
 
 var levNames = map[level]string{
 	lPanic: "PANIC",
@@ -415,6 +424,45 @@ func SetPathParts(pathParts int) {
 //
 func SetLevelNotation(mapper func(string) string) {
 	LevelNotation = mapper
+}
+
+// ExitViaPanic() improves the way lager.Exit() works so that uses of it
+// in inappropriate places are less problematic.  Using lager.Exit() causes
+// 'os.Exit(1)' to be called, which prevents any 'defer'ed code from doing
+// important clean-up.  One should only use lager.Exit() in code that will
+// only run during process initialization, which means it should only be
+// called when there is nothing important that needs to be cleaned up.  But
+// mistakes are sometimes made.
+//
+// Doing:
+//
+//      defer lager.ExitViaPanic()()
+//      //                        ^^ The 2nd set of parens is important!
+//
+// very early in your main() function will mean that uses of lager.Exit()
+// will only skip clean-up in items that were 'defer'ed before that point.
+// The call to 'os.Exit(1)' will be done in the function returned from
+// ExitViaPanic() rather than at the point where lager.Exit()'s return
+// value was used.
+//
+// If you would instead like lager.Exit() to terminate the process with
+// a plain panic(), then omit the 'defer' and the 2nd set of parens:
+//
+//      _ = lager.ExitViaPanic()
+//
+func ExitViaPanic() func() {
+	atomic.AddInt32(&_exiters, 1)
+	return recoverPanicToExit
+}
+
+// The 'defer'ed part of ExitViaPanic().
+func recoverPanicToExit() {
+	atomic.AddInt32(&_exiters, -1)
+	if p := recover(); p == _panicToExit {
+		os.Exit(1)
+	} else if nil != p {
+		panic(p)
+	}
 }
 
 // Gets a Lager based on the internal enum for a log level.
