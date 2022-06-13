@@ -1,6 +1,3 @@
-// Copyright 2016 Michal Witkowski. All Rights Reserved.
-// See LICENSE for licensing terms.
-
 /*
 Package `grpc_lager_testing` provides helper functions for testing validators in this package.
 */

@@ -9,8 +9,6 @@ import (
 	"google.golang.org/grpc"
 )
 
-// based on https://github.com/grpc-ecosystem/go-grpc-middleware/blob/master/logging/zap/server_interceptors.go
-
 var (
 	// SystemField is used in every log statement made through grpc_lager. Can be overwritten before any initialization code.
 	SystemField = "grpc"

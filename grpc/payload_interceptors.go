@@ -9,18 +9,19 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-// based on https://github.com/grpc-ecosystem/go-grpc-middleware/blob/master/logging/zap/payload_interceptors.go
-
 var (
 	// JSONPbFormatter is the formatter used for formatting protobuf messages as strings.
 	// If needed, this variable can be reassigned with a different formatter with the same Format() signature.
 	JSONPbFormatter JSONPbFormater = &protojson.MarshalOptions{}
 )
 
+// JSONPbFormater is a formatter that formats protobuf messages.
 type JSONPbFormater interface {
 	Format(m proto.Message) string
 }
 
+// ServerPayloadLoggingDecider is a user-provided function for deciding whether to log the server-side
+// request/response payloads
 type ServerPayloadLoggingDecider func(ctx context.Context, fullMethodName string, servingObject interface{}) bool
 
 func PayloadUnaryServerInterceptor(decider ServerPayloadLoggingDecider) grpc.UnaryServerInterceptor {

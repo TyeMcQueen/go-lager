@@ -1,3 +1,7 @@
+/*
+grpc_lager_test is a testing suite for testing grpc_lager
+Based on test suite provided by https://github.com/grpc-ecosystem/go-grpc-middleware/tree/v1.3.0
+*/
 package grpc_lager_test
 
 import (
