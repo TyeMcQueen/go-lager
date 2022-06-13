@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"strings"
+	"sync"
 )
 
 /// TYPES ///
@@ -229,6 +230,26 @@ var levNames = map[level]string{
 }
 
 /// FUNCS ///
+
+// AutoLock() can be used on any sync.Locker (anything with Lock and Unlock
+// methods, like a *sync.Mutex).  Call it like:
+//
+//      defer lager.AutoLock(locker)()
+//      //                          ^^ The 2nd set of parens is important!
+//
+// and the Locker will be locked immediately and unlocked when your function
+// ends.
+//
+// If 'mu' is of type sync.Mutex, then you would have to call:
+//
+//      defer lager.AutoLock(&mu)()
+//
+// as a *sync.Mutex is a Locker but a sync.Mutex is not.
+//
+func AutoLock(l sync.Locker) func() {
+	l.Lock()
+	return l.Unlock
+}
 
 func init() {
 	g := _globals
