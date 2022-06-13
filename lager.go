@@ -27,7 +27,7 @@ type Lager interface {
 	//
 	List(args ...interface{})
 
-	// CList() is the same as '.WithCaller(0,-1).List(...)'.
+	// CList() is the same as '.WithCaller(0).List(...)'.
 	CList(args ...interface{})
 
 	// MList() takes a message string followed by 0 or more arbitrary values.
@@ -43,7 +43,7 @@ type Lager interface {
 	//
 	MList(message string, args ...interface{})
 
-	// CMList() is the same as '.WithCaller(0,-1).MList(...)'.
+	// CMList() is the same as '.WithCaller(0).MList(...)'.
 	CMList(message string, args ...interface{})
 
 	// The Map() method takes a list of key/value pairs and writes a single
@@ -55,7 +55,7 @@ type Lager interface {
 	//
 	Map(pairs ...interface{})
 
-	// CMap() is the same as '.WithCaller(0,-1).Map(...)'.
+	// CMap() is the same as '.WithCaller(0).Map(...)'.
 	CMap(pairs ...interface{})
 
 	// MMap() takes a message string followed by zero or more key/value
@@ -80,7 +80,7 @@ type Lager interface {
 	//
 	MMap(message string, pairs ...interface{})
 
-	// Same as '.WithCaller(0,-1).MMap(...)'.
+	// Same as '.WithCaller(0).MMap(...)'.
 	CMMap(message string, pairs ...interface{})
 
 	// With() returns a new Lager that adds to each log line the key/value
@@ -94,7 +94,7 @@ type Lager interface {
 	// WithStack() adds a "_stack" key/value pair to the logged context.  The
 	// value is a list of strings where each string is a line number (base
 	// 10) followed by a space and then the code file name (shortened to the
-	// last 'pathParts' components).
+	// last 'PathParts' components).
 	//
 	// If 'stackLen' is 0 (or negative), then the full stack trace will be
 	// included.  Otherwise, the list will contain at most 'stackLen' strings.
@@ -103,20 +103,23 @@ type Lager interface {
 	// A 'minDepth' of 0 starts at the line where WithStack() was called and
 	// 1 starts at the line of the caller of the caller of WithStack(), etc.
 	//
-	// See WithCaller() for details on usage 'pathParts'.
+	// DEPRECATED: The 'pathParts' argument is deprecated and will be removed
+	// in the next feature release of Lager.  In this interim release, to make
+	// 'pathParts' optional, you can pass more than one value for it but only
+	// the first one matters.
 	//
-	WithStack(minDepth, stackLen, pathParts int) Lager
+	WithStack(minDepth, stackLen int, pathParts ...int) Lager
 
 	// WithCaller() adds "_file" and "_line" key/value pairs to the logged
 	// context.  A 'depth' of 0 means the line where WithCaller() was called,
 	// and 1 is the line of the caller of the caller of WithCaller(), etc.
 	//
-	// 'pathParts' indicates how many directories to include in the code file
-	// name.  A 0 'pathParts' includes the full path.  A 1 would only include
-	// the file name.  A 2 would include the file name and the deepest sub-
-	// directory name.  A -1 uses the value of lager.PathParts.
+	// DEPRECATED: The 'pathParts' argument is deprecated and will be removed
+	// in the next feature release of Lager.  In this interim release, to make
+	// 'pathParts' optional, you can pass more than one value for it but only
+	// the first one matters.
 	//
-	WithCaller(depth, pathParts int) Lager
+	WithCaller(depth int, pathParts ...int) Lager
 
 	// The Println() method is provided for minimal compatibility with
 	// log.Logger, as this method is the one most used by other modules.
@@ -134,19 +137,19 @@ type keyStrs struct {
 // Also used as "key" for context.Context decoration.
 type noop struct{}
 
-func (_ noop) List(_ ...interface{})             {}
-func (_ noop) CList(_ ...interface{})            {}
-func (_ noop) MList(_ string, _ ...interface{})  {}
-func (_ noop) CMList(_ string, _ ...interface{}) {}
-func (_ noop) Map(_ ...interface{})              {}
-func (_ noop) CMap(_ ...interface{})             {}
-func (_ noop) MMap(_ string, _ ...interface{})   {}
-func (_ noop) CMMap(_ string, _ ...interface{})  {}
-func (n noop) With(_ ...Ctx) Lager               { return n }
-func (n noop) WithStack(_, _, _ int) Lager       { return n }
-func (n noop) WithCaller(_, _ int) Lager         { return n }
-func (_ noop) Enabled() bool                     { return false }
-func (_ noop) Println(_ ...interface{})          {}
+func (_ noop) List(_ ...interface{})              {}
+func (_ noop) CList(_ ...interface{})             {}
+func (_ noop) MList(_ string, _ ...interface{})   {}
+func (_ noop) CMList(_ string, _ ...interface{})  {}
+func (_ noop) Map(_ ...interface{})               {}
+func (_ noop) CMap(_ ...interface{})              {}
+func (_ noop) MMap(_ string, _ ...interface{})    {}
+func (_ noop) CMMap(_ string, _ ...interface{})   {}
+func (n noop) With(_ ...Ctx) Lager                { return n }
+func (n noop) WithStack(_, _ int, _ ...int) Lager { return n }
+func (n noop) WithCaller(_ int, _ ...int) Lager   { return n }
+func (_ noop) Enabled() bool                      { return false }
+func (_ noop) Println(_ ...interface{})           {}
 
 // The type for internal log levels.
 type level int8
@@ -184,17 +187,29 @@ var _keys *keyStrs
 // The currently enabled log levels (used by module.go).
 var _enabledLevels string
 
+// DEPRECATED: The next feature release of Lager will require the use of
+// lager.SetOutput() rather than modifying a global lager.OutputDest.
+//
 // Set OutputDest to a non-nil io.Writer to not write logs to os.Stdout and
 // os.Stderr.
+//
 var OutputDest io.Writer
 
-// 'pathParts' to use when -1 is passed to WithCaller() or WithStack().
+// DEPRECATED: The next feature release of Lager will require the use of
+// lager.SetPathParts() rather than modifying a global lager.PathParts.
+//
+// 'PathParts' to use when -1 is passed to WithCaller() or WithStack().
+//
 var PathParts = 0
 
+// DEPRECATED: The next feature release of Lager will require the use of
+// lager.SetLevelNotation() over modifying a global lager.LevelNotation.
+//
 // LevelNotation takes a log level name (like "DEBUG") and returns how that
 // level should be shown in the log.  This defaults to not changing the
 // level name.  If the environment variable LAGER_GCP is non-empty, then
 // it instead defaults to using GcpLevelName().
+//
 var LevelNotation = func(lev string) string { return lev }
 
 var _inGcp = os.Getenv("LAGER_GCP")
@@ -281,6 +296,36 @@ func Init(levels string) {
 		}
 	}
 	_enabledLevels = string(enabled)
+}
+
+// SetOutput() causes Lager to write all logs to the passed-in io.Writer.
+// If 'nil' is passed in, then Lager returns to writing to os.Stdout (for
+// most log levels) and to os.Stderr (for Panic and Exit levels).
+//
+func SetOutput(writer io.Writer) {
+	// TODO: write safe version
+	OutputDest = writer
+}
+
+// SetPathParts() sets how many path components to include in the source
+// code file names when recording caller information or a stack trace.
+// Passing in 1 will cause only the source code file name to be included.
+// A 2 will include the file name and the name of the directory it is in.
+// A 3 adds the directory above that, etc.  A value of 0 (or -1) will include
+// the full path.
+//
+func SetPathParts(pathParts int) {
+	// TODO: write safe version
+	PathParts = pathParts
+}
+
+// SetLevelNotation() installs a function to map from Lager's level names
+// (like "DEBUG") to other values to indicate log levels.  An example of
+// such a function is GcpLevelName().  If you write such a function, you
+// should just key of the first letter of the passed-in level name.
+//
+func SetLevelNotation(mapper func(string) string) {
+	LevelNotation = mapper
 }
 
 // Gets a Lager based on the internal enum for a log level.
@@ -465,7 +510,7 @@ func Keys(when, lev, msg, args, ctx, mod string) {
 		_keys = nil
 		return
 	} else if "" == when || "" == lev || "" == args || "" == mod {
-		Exit().WithCaller(1, -1).List("Only keys for msg and ctx can be blank")
+		Exit().WithCaller(1).List("Only keys for msg and ctx can be blank")
 	}
 	_keys = &keyStrs{
 		when: when, lev: lev, msg: msg, args: args, ctx: ctx, mod: mod,
