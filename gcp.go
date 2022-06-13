@@ -59,7 +59,12 @@ func GcpProjectID(ctx Ctx) (string, error) {
 // RunningInGcp() tells Lager to log messages in a format that works best
 // when running inside of the Google Cloud Platform (when using GCP Cloud
 // Logging).  You can call this so you don't have to set LAGER_GCP=1 in your
-// environment.
+// environment, but note that it will be possible for logging to happen
+// before this call is executed [such as some logging triggered, perhaps
+// indirectly, by some code in an Init() function] and such logs would not
+// be in the desired format.  Even calling RunningInGcp() from your own
+// Init() function will not guarantee it happens before any logging.  For
+// this reason, using LAGER_GCP=1 is preferred.
 //
 // In particular, RunningInGcp() is equivalent to running:
 //
@@ -73,15 +78,23 @@ func GcpProjectID(ctx Ctx) (string, error) {
 // but a message is logged so that jsonPayload.message does not get
 // transformed into textPayload when the log is ingested into Cloud Logging.
 //
-// RunningInGcp() is called automatically if the "LAGER_GCP" environment
-// variable contains a non-empty value when the process is started.
-//
 func RunningInGcp() {
-	_globals.inGcp = true
-	if "" == os.Getenv("LAGER_KEYS") {
-		Keys("time", "severity", "message", "data", "", "module")
+	updateGlobals(setRunningInGcp())
+}
+
+// How GCP options are set safely.
+func setRunningInGcp() func(*globals) {
+	return func(g *globals) {
+		g.inGcp = true
+		if "" == os.Getenv("LAGER_KEYS") {
+			g.keys = &keyStrs{
+				when: "time", lev: "severity", msg: "message",
+				args: "data", mod: "module", ctx: "",
+			}
+		}
+		// TODO: g.levDesc = GcpLevelName
+		SetLevelNotation(GcpLevelName)
 	}
-	SetLevelNotation(GcpLevelName)
 }
 
 // GcpLevelName takes a Lager level name (only the first letter matters and
