@@ -42,16 +42,6 @@ func (s *loggingPingService) PingError(ctx context.Context, ping *pb_testproto.P
 	return s.TestServiceServer.PingError(ctx, ping)
 }
 
-// func (s *loggingPingService) PingList(ping *pb_testproto.PingRequest, stream pb_testproto.TestService_PingListServer) error {
-// 	// grpc_ctxtags.Extract(stream.Context()).Set("custom_tags.string", "something").Set("custom_tags.int", 1337)
-// 	// ctxzap.Extract(stream.Context()).Info("some pinglist")
-// 	return s.TestServiceServer.PingList(ping, stream)
-// }
-
-// func (s *loggingPingService) PingEmpty(ctx context.Context, empty *pb_testproto.Empty) (*pb_testproto.PingResponse, error) {
-// 	return s.TestServiceServer.PingEmpty(ctx, empty)
-// }
-
 type baseSuite struct {
 	*grpc_lager_testing.InterceptorTestSuite
 	mutexBuffer     *grpc_testing.MutexReadWriter
