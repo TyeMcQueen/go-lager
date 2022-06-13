@@ -67,7 +67,7 @@ func GcpProjectID(ctx Ctx) (string, error) {
 //          // LAGER_KEYS has precedence over LAGER_GCP.
 //          lager.Keys("time", "severity", "message", "data", "", "module")
 //      }
-//      lager.LevelNotation = lager.GcpLevelName
+//      lager.SetLevelNotation(lager.GcpLevelName)
 //
 // It also arranges for an extra element to be added to the JSON if nothing
 // but a message is logged so that jsonPayload.message does not get
@@ -77,11 +77,11 @@ func GcpProjectID(ctx Ctx) (string, error) {
 // variable contains a non-empty value when the process is started.
 //
 func RunningInGcp() {
-	_inGcp = "1"
+	_globals.inGcp = true
 	if "" == os.Getenv("LAGER_KEYS") {
 		Keys("time", "severity", "message", "data", "", "module")
 	}
-	LevelNotation = GcpLevelName
+	SetLevelNotation(GcpLevelName)
 }
 
 // GcpLevelName takes a Lager level name (only the first letter matters and

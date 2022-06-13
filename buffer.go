@@ -21,6 +21,7 @@ type buffer struct {
 	w       io.Writer       // Usually os.Stdout, else os.Stderr.
 	delim   string          // Delimiter to go before next value.
 	locked  bool            // Whether we had to lock outMu.
+	g       *globals
 }
 
 // A Stringer just has a String() method that returns its stringification.
@@ -229,7 +230,7 @@ func (b *buffer) timestamp() {
 	b.int2(int(mo))
 	b.write("-")
 	b.int2(day)
-	if nil == _keys {
+	if nil == b.g.keys {
 		b.write(" ") // Use easier-for-humans-to-read format
 	} else {
 		b.write("T") // Use standard format (GCP cares)

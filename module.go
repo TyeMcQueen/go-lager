@@ -115,7 +115,7 @@ func (m *Module) Init(levels string) *Module {
 		m.lagers[int(l)] = noop{}
 	}
 	if "" == levels {
-		levels = _enabledLevels
+		levels = _globals.enabled
 	}
 	for _, c := range levels {
 		switch c {
@@ -146,7 +146,12 @@ func (m *Module) Init(levels string) *Module {
 }
 
 func (m *Module) modLevel(lev level, cs ...Ctx) Lager {
-	return m.lagers[int(lev)].With(cs...)
+	l := m.lagers[int(lev)]
+	if pReal, ok := l.(*logger); ok {
+		pReal.g = _globals
+	}
+	l = l.With(cs...)
+	return l
 }
 
 // Returns a Lager object that calls panic().  The JSON log line is first
