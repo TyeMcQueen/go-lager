@@ -240,11 +240,14 @@ var PathParts = 0
 //
 var LevelNotation = func(lev string) string { return lev }
 
+// The special value passed to panic() [see ExitViaPanic()].
+var _panicToExit = fakePanic("panic() from lager.Exit()")
+
 // How many 'defer lager.ExitViaPanic()()' calls are waiting.
 var _exiters int32 = 0
 
-// The special value passed to panic() [see ExitViaPanic()].
-var _panicToExit = fakePanic("panic() from lager.Exit()")
+// Whether to add stack trace to all lager.Exit() logs.
+var _stackWithExit int32 = 0
 
 var levNames = map[level]string{
 	lPanic: "PANIC",
@@ -463,7 +466,7 @@ func SetLevelNotation(mapper func(string) string) {
 // will only skip clean-up in items that were 'defer'ed before that point.
 // The call to 'os.Exit(1)' will be done in the function returned from
 // ExitViaPanic() rather than at the point where lager.Exit()'s return
-// value was used.
+// value was used.  See also ExitNotExpected().
 //
 // If you would instead like lager.Exit() to terminate the process with
 // a plain panic(), then omit the 'defer' and the 2nd set of parens:
@@ -482,6 +485,27 @@ func recoverPanicToExit() {
 		os.Exit(1)
 	} else if nil != p {
 		panic(p)
+	}
+}
+
+// ExitNotExpected(true) causes any subsequent uses of lager.Exit() to
+// include a full stack trace.  You usually call ExitNotExpected() at
+// the point where process initialization has completed.  If you had not
+// previously called 'defer lager.ExitViaPanic()()', then a warning is
+// logged [catches accidentally writing 'defer lager.ExitViaPanic()'].
+//
+// ExitNotExpected(false) disables the added stack trace [and never logs
+// a warning].
+//
+func ExitNotExpected(unexpected bool) {
+	if unexpected {
+		atomic.StoreInt32(&_stackWithExit, 1)
+		if 0 == atomic.LoadInt32(&_exiters) {
+			Warn().MMap("ExitNotExpected(true) when ExitViaPanic() not enabled",
+				"cause may be", "defer lager.ExitViaPanic() // no 2nd '()'")
+		}
+	} else {
+		atomic.StoreInt32(&_stackWithExit, 0)
 	}
 }
 
@@ -511,7 +535,9 @@ func Panic(cs ...Ctx) Lager { return forLevel(lPanic, cs...) }
 // this level Exit, that ambiguity is removed.
 //
 // Exit() should only be used during process initialization as os.Exit()
-// will prevent any 'defer'ed clean-up operations from running.
+// will prevent any 'defer'ed clean-up operations from running.  You can
+// use ExitNotExpected() and ExitViaPanic() to find problematic uses of
+// lager.Exit() and mitigate their impact.
 //
 func Exit(cs ...Ctx) Lager { return forLevel(lExit, cs...) }
 
@@ -735,6 +761,10 @@ func (l *logger) start() *buffer {
 
 // Common closing steps for both List() and Map() methods.
 func (l *logger) end(b *buffer) {
+	if lExit == l.lev && 0 != atomic.LoadInt32(&_stackWithExit) {
+		// 0: skip end(), 1: skip MMap() etc, 2: get caller of MMap() etc:
+		l = l.WithStack(2, 0).(*logger)
+	}
 	if nil == l.g.keys {
 		b.scalar(l.kvp)
 	} else if "" == l.g.keys.ctx {
