@@ -74,8 +74,6 @@ func (s *serverSuite) TestPing_WithCustomTags() {
 		assert.Equal(s.T(), "Ping", last["grpc.method"], "all lines must contain method name")
 		assert.Equal(s.T(), "server", last["span.kind"], "all lines must contain the kind of call (server)")
 		assert.Equal(s.T(), "something", last["custom_tags.string"], "all lines must contain `custom_tags.string`")
-		// assert.Equal(s.T(), "something", last["grpc.request.value"], "all lines must contain fields extracted")
-		// assert.Equal(s.T(), "custom_value", last["custom_field"], "all lines must contain `custom_field`")
 
 		assert.Contains(s.T(), last, "custom_tags.int", "all lines must contain `custom_tags.int`")
 		require.Contains(s.T(), last, "grpc.start_time", "all lines must contain the start time")
@@ -87,6 +85,11 @@ func (s *serverSuite) TestPing_WithCustomTags() {
 		require.NoError(s.T(), err, "should be able to parse deadline")
 		assert.Equal(s.T(), last["grpc.request.deadline"], deadline.Format(s.timestampFormat), "should have the same deadline that was set by the caller")
 	}
+
+	// The message logged in the gRPC service handler directly after adding pairs to the context should contain the custom_field,
+	// any message logged in an interceptor will not have this new context since it is never passed. This is expected behavior,
+	// other logging libraries work around this by updating values of an existing context rather than creating a new one.
+	assert.Equal(s.T(), "custom_value", getMap(msgs[0][4])["custom_field"], "first message must contain `custom_field`")
 
 	assert.Equal(s.T(), "some ping", msgs[0][2], "handler's message must contain user message")
 
