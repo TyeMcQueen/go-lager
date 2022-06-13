@@ -8,6 +8,7 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"sync/atomic"
 )
 
 /// TYPES ///
@@ -16,7 +17,8 @@ import (
 // signatures.  You never need to use lager.Ctx in your code.
 type Ctx = context.Context
 
-// Global values that will soon be protected by atomic.Value.
+// Global values that are accessed via an atomic.Value so they can be safely
+// initialized/updated even if somebody logs from an init() function.
 type globals struct {
 	// A Lager singleton for each log level (some will be noops).
 	lagers [int(nLevels)]Lager
@@ -184,10 +186,15 @@ type logger struct {
 
 /// GLOBALS ///
 
-// Global configuration
-var _globals = &globals{
-	inGcp: "" != os.Getenv("LAGER_GCP"),
-}
+// Global configuration that can be updated even while logging is happening.
+var _globals atomic.Value
+
+// To ensure environment-based initialization happens when first logging is
+// attempted or first code-based configuration change is made.
+var _firstInit sync.Once
+
+// Lock held when _globals is being updated.
+var _globalsMutex sync.Mutex
 
 // DEPRECATED: The next feature release of Lager will require the use of
 // lager.SetOutput() rather than modifying a global lager.OutputDest.
@@ -251,14 +258,56 @@ func AutoLock(l sync.Locker) func() {
 	return l.Unlock
 }
 
-func init() {
-	g := _globals
+// Safely get a pointer to the current 'globals' struct.
+func getGlobals() *globals {
+	_firstInit.Do(firstInit)
+	p := _globals.Load()
+	return p.(*globals)
+}
+
+// How to safely make updates to _globals.
+func updateGlobals(updater func(*globals)) {
+	_firstInit.Do(firstInit)
+	defer AutoLock(&_globalsMutex)()
+	curr := getGlobals()
+	copy := *curr
+	// Copy all loggers so we can change the g pointer only in the new copies:
+	for i, l := range copy.lagers {
+		if pLog, ok := l.(*logger); ok {
+			logCopy := *pLog
+			copy.lagers[i] = &logCopy
+		}
+	}
+	updater(&copy)
+	// Update the g pointer in all loggers (after update) to the new globals:
+	for _, l := range copy.lagers {
+		if pLog, ok := l.(*logger); ok {
+			pLog.g = &copy
+		}
+	}
+	_globals.Store(&copy)
+}
+
+// firstInit() is called the first time logging is attempted or configuration
+// changes to Lager are made via code.  It initializes configuration based
+// on environment variables, making it safe to use Lager in initialization
+// code.
+//
+func firstInit() {
+	g := globals{}
 	g.lagers[int(lPanic)] = &logger{lev: lPanic}
 	g.lagers[int(lExit)] = &logger{lev: lExit}
-	Init(os.Getenv("LAGER_LEVELS"))
+	setLevels(os.Getenv("LAGER_LEVELS"))(&g)
 
-	if g.inGcp {
-		RunningInGcp()
+	// Update the g pointer in all loggers to the new globals:
+	for _, l := range g.lagers {
+		if pLog, ok := l.(*logger); ok {
+			pLog.g = &g
+		}
+	}
+
+	if "" != os.Getenv("LAGER_GCP") {
+		setRunningInGcp()(&g)
 	}
 
 	if k := os.Getenv("LAGER_KEYS"); "" != k {
@@ -267,9 +316,18 @@ func init() {
 			Exit().MMap(
 				"LAGER_KEYS expected 6 comma-separated labels",
 				"Not", len(keys), "Value", k)
+		} else if "" == keys[0] || "" == keys[1] || "" == keys[3] ||
+			"" == keys[5] {
+			Exit().WithCaller(1).MMap("Only keys for msg and ctx can be blank",
+				"LAGER_KEYS", keys)
 		}
-		Keys(keys[0], keys[1], keys[2], keys[3], keys[4], keys[5])
+		setKeys(&keyStrs{
+			when: keys[0], lev: keys[1], msg: keys[2],
+			args: keys[3], ctx: keys[4], mod: keys[5],
+		})(&g)
 	}
+
+	_globals.Store(&g)
 }
 
 // Init() en-/disables log levels.  Pass in a string of letters from
@@ -282,43 +340,49 @@ func init() {
 // call Init("Fail Warn Note Access Info").
 //
 func Init(levels string) {
-	g := _globals
-	for l := lFail; l <= lGuts; l++ {
-		g.lagers[int(l)] = noop{}
-	}
-	if "" == levels {
-		levels = "FW"
-	}
-	enabled := make([]byte, 0, 9)
-	for _, c := range levels {
-		switch c {
-		case 'F':
-			g.lagers[int(lFail)] = &logger{lev: lFail, g: g}
-		case 'W':
-			g.lagers[int(lWarn)] = &logger{lev: lWarn, g: g}
-		case 'N':
-			g.lagers[int(lNote)] = &logger{lev: lNote, g: g}
-		case 'A':
-			g.lagers[int(lAcc)] = &logger{lev: lAcc, g: g}
-		case 'I':
-			g.lagers[int(lInfo)] = &logger{lev: lInfo, g: g}
-		case 'T':
-			g.lagers[int(lTrace)] = &logger{lev: lTrace, g: g}
-		case 'D':
-			g.lagers[int(lDebug)] = &logger{lev: lDebug, g: g}
-		case 'O':
-			g.lagers[int(lObj)] = &logger{lev: lObj, g: g}
-		case 'G':
-			g.lagers[int(lGuts)] = &logger{lev: lGuts, g: g}
-		default:
-			continue
+	updateGlobals(setLevels(levels))
+}
+
+// How log level initialization is done safely.
+func setLevels(levels string) func(*globals) {
+	return func(g *globals) {
+		for l := lFail; l <= lGuts; l++ {
+			g.lagers[int(l)] = noop{}
 		}
-		b := byte(c)
-		if !bytes.Contains([]byte{b}, enabled) {
-			enabled = append(enabled, b)
+		if "" == levels {
+			levels = "FW"
 		}
+		enabled := make([]byte, 0, 9)
+		for _, c := range levels {
+			switch c {
+			case 'F':
+				g.lagers[int(lFail)] = &logger{lev: lFail}
+			case 'W':
+				g.lagers[int(lWarn)] = &logger{lev: lWarn}
+			case 'N':
+				g.lagers[int(lNote)] = &logger{lev: lNote}
+			case 'A':
+				g.lagers[int(lAcc)] = &logger{lev: lAcc}
+			case 'I':
+				g.lagers[int(lInfo)] = &logger{lev: lInfo}
+			case 'T':
+				g.lagers[int(lTrace)] = &logger{lev: lTrace}
+			case 'D':
+				g.lagers[int(lDebug)] = &logger{lev: lDebug}
+			case 'O':
+				g.lagers[int(lObj)] = &logger{lev: lObj}
+			case 'G':
+				g.lagers[int(lGuts)] = &logger{lev: lGuts}
+			default:
+				continue
+			}
+			b := byte(c)
+			if !bytes.Contains([]byte{b}, enabled) {
+				enabled = append(enabled, b)
+			}
+		}
+		g.enabled = string(enabled)
 	}
-	g.enabled = string(enabled)
 }
 
 // SetOutput() causes Lager to write all logs to the passed-in io.Writer.
@@ -355,7 +419,7 @@ func SetLevelNotation(mapper func(string) string) {
 
 // Gets a Lager based on the internal enum for a log level.
 func forLevel(lev level, cs ...Ctx) Lager {
-	g := _globals
+	g := getGlobals()
 	l := g.lagers[int(lev)].With(cs...)
 	return l
 }
@@ -507,6 +571,13 @@ func (l level) String() string {
 	return fmt.Sprintf("%d", int(l))
 }
 
+// How globals.keys is updated safely.
+func setKeys(keys *keyStrs) func(*globals) {
+	return func(g *globals) {
+		g.keys = keys
+	}
+}
+
 // Keys() provides keys to be used to write each JSON log line as a map
 // (object or hash) instead of as a list (array).
 //
@@ -534,14 +605,15 @@ func (l level) String() string {
 func Keys(when, lev, msg, args, ctx, mod string) {
 	if "" == when && "" == lev && "" == args && "" == mod &&
 		"" == ctx && "" == msg {
-		_globals.keys = nil
+		updateGlobals(setKeys(nil))
 		return
 	} else if "" == when || "" == lev || "" == args || "" == mod {
 		Exit().WithCaller(1).List("Only keys for msg and ctx can be blank")
 	}
-	_globals.keys = &keyStrs{
+
+	updateGlobals(setKeys(&keyStrs{
 		when: when, lev: lev, msg: msg, args: args, ctx: ctx, mod: mod,
-	}
+	}))
 }
 
 // See the Lager interface for documentation.
