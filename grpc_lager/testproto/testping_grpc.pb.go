@@ -33,7 +33,7 @@ func NewTestServiceClient(cc grpc.ClientConnInterface) TestServiceClient {
 
 func (c *testServiceClient) PingEmpty(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*PingResponse, error) {
 	out := new(PingResponse)
-	err := c.cc.Invoke(ctx, "/lager_grpc.testproto.TestService/PingEmpty", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/grpc_lager.testproto.TestService/PingEmpty", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -42,7 +42,7 @@ func (c *testServiceClient) PingEmpty(ctx context.Context, in *Empty, opts ...gr
 
 func (c *testServiceClient) Ping(ctx context.Context, in *PingRequest, opts ...grpc.CallOption) (*PingResponse, error) {
 	out := new(PingResponse)
-	err := c.cc.Invoke(ctx, "/lager_grpc.testproto.TestService/Ping", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/grpc_lager.testproto.TestService/Ping", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -51,7 +51,7 @@ func (c *testServiceClient) Ping(ctx context.Context, in *PingRequest, opts ...g
 
 func (c *testServiceClient) PingError(ctx context.Context, in *PingRequest, opts ...grpc.CallOption) (*Empty, error) {
 	out := new(Empty)
-	err := c.cc.Invoke(ctx, "/lager_grpc.testproto.TestService/PingError", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/grpc_lager.testproto.TestService/PingError", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -104,7 +104,7 @@ func _TestService_PingEmpty_Handler(srv interface{}, ctx context.Context, dec fu
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/lager_grpc.testproto.TestService/PingEmpty",
+		FullMethod: "/grpc_lager.testproto.TestService/PingEmpty",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(TestServiceServer).PingEmpty(ctx, req.(*Empty))
@@ -122,7 +122,7 @@ func _TestService_Ping_Handler(srv interface{}, ctx context.Context, dec func(in
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/lager_grpc.testproto.TestService/Ping",
+		FullMethod: "/grpc_lager.testproto.TestService/Ping",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(TestServiceServer).Ping(ctx, req.(*PingRequest))
@@ -140,7 +140,7 @@ func _TestService_PingError_Handler(srv interface{}, ctx context.Context, dec fu
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/lager_grpc.testproto.TestService/PingError",
+		FullMethod: "/grpc_lager.testproto.TestService/PingError",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(TestServiceServer).PingError(ctx, req.(*PingRequest))
@@ -152,7 +152,7 @@ func _TestService_PingError_Handler(srv interface{}, ctx context.Context, dec fu
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var TestService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "lager_grpc.testproto.TestService",
+	ServiceName: "grpc_lager.testproto.TestService",
 	HandlerType: (*TestServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{

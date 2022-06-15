@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	grpc_lager "github.com/TyeMcQueen/go-lager/grpc"
-	pb_testproto "github.com/TyeMcQueen/go-lager/grpc/testproto"
+	grpc_lager "github.com/TyeMcQueen/go-lager/grpc_lager"
+	pb_testproto "github.com/TyeMcQueen/go-lager/grpc_lager/testproto"
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_ctxtags "github.com/grpc-ecosystem/go-grpc-middleware/tags"
 	"github.com/stretchr/testify/assert"

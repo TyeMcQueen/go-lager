@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package lager_grpc.testproto;
+package grpc_lager.testproto;
 
 option go_package = "../testproto";
 

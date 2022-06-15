@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/TyeMcQueen/go-lager"
-	lager_grpc "github.com/TyeMcQueen/go-lager/grpc"
+	lager_grpc "github.com/TyeMcQueen/go-lager/grpc_lager"
 	"github.com/TyeMcQueen/go-tutl"
 )
 

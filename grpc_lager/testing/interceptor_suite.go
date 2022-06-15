@@ -13,7 +13,7 @@ import (
 	"net"
 	"time"
 
-	pb_testproto "github.com/TyeMcQueen/go-lager/grpc/testproto"
+	pb_testproto "github.com/TyeMcQueen/go-lager/grpc_lager/testproto"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"google.golang.org/grpc"
