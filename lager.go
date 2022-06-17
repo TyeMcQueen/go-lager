@@ -417,9 +417,10 @@ func setLevels(levels string) func(*globals) {
 	}
 }
 
-// SetOutput() causes Lager to write all logs to the passed-in io.Writer.
-// If 'nil' is passed in, then Lager returns to writing to os.Stdout (for
-// most log levels) and to os.Stderr (for Panic and Exit levels).
+// SetOutput() causes all future log lines to be written to the passed-in
+// io.Writer.  If 'nil' is passed in, then log lines return to being written
+// to os.Stdout (for most log levels) and to os.Stderr (for Panic and Exit
+// levels).
 //
 func SetOutput(writer io.Writer) {
 	// TODO: write safe version
@@ -443,7 +444,7 @@ func SetPathParts(pathParts int) {
 // SetLevelNotation() installs a function to map from Lager's level names
 // (like "DEBUG") to other values to indicate log levels.  An example of
 // such a function is GcpLevelName().  If you write such a function, you
-// should just key of the first letter of the passed-in level name.
+// would usually just key off the first letter of the passed-in level name.
 //
 func SetLevelNotation(mapper func(string) string) {
 	LevelNotation = mapper
@@ -468,21 +469,38 @@ func SetLevelNotation(mapper func(string) string) {
 // ExitViaPanic() rather than at the point where lager.Exit()'s return
 // value was used.  See also ExitNotExpected().
 //
+// You can change the exit status or prevent the call to os.Exit() (such as
+// for testing); see RecoverPanicToExit() for details.
+//
 // If you would instead like lager.Exit() to terminate the process with
 // a plain panic(), then omit the 'defer' and the 2nd set of parens:
 //
 //      _ = lager.ExitViaPanic()
 //
-func ExitViaPanic() func() {
+func ExitViaPanic() func(...func(*int)) {
 	atomic.AddInt32(&_exiters, 1)
-	return recoverPanicToExit
+	return RecoverPanicToExit
 }
 
-// The 'defer'ed part of ExitViaPanic().
-func recoverPanicToExit() {
+// RecoverPanicToExit is the func pointer that is returned by
+// ExitViaPanic().  It must be called via 'defer' and will call os.Exit(1)
+// if lager.Exit() has invoked panic() because of ExitViaPanic().
+//
+// If you pass in one or more 'func(*int)' arguments, then they will each be
+// called and passed a pointer to the exit status (initially 1) so that they
+// can change it or just note the impending Exit.  If the final value is
+// negative, then os.Exit() will not be called (useful when testing).
+//
+func RecoverPanicToExit(handlers ...func(*int)) {
 	atomic.AddInt32(&_exiters, -1)
 	if p := recover(); p == _panicToExit {
-		os.Exit(1)
+		exit := 1
+		for _, h := range handlers {
+			h(&exit)
+		}
+		if 0 <= exit {
+			os.Exit(exit)
+		}
 	} else if nil != p {
 		panic(p)
 	}
