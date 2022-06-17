@@ -453,16 +453,33 @@ func SetLevelNotation(mapper func(string) string) {
 //
 //      _ = lager.ExitViaPanic()
 //
-func ExitViaPanic() func() {
+// You can change the exit status or prevent the call to os.Exit() (such as
+// for testing); see RecoverPanicToExit() for details.
+//
+func ExitViaPanic() func(...func(*int)) {
 	atomic.AddInt32(&_exiters, 1)
-	return recoverPanicToExit
+	return RecoverPanicToExit
 }
 
-// The 'defer'ed part of ExitViaPanic().
-func recoverPanicToExit() {
+// RecoverPanicToExit is the func pointer that is returned by
+// ExitViaPanic().  It must be called via 'defer' and will call os.Exit(1)
+// if lager.Exit() has invoked panic() because of ExitViaPanic().
+//
+// If you pass in one or more 'func(*int)' arguments, then they will each be
+// called and passed a pointer to the exit status (initially 1) so that they
+// can change it or just note the impending Exit.  If the final value is
+// negative, then os.Exit() will not be called (useful when testing).
+//
+func RecoverPanicToExit(handlers ...func(*int)) {
 	atomic.AddInt32(&_exiters, -1)
 	if p := recover(); p == _panicToExit {
-		os.Exit(1)
+		exit := 1
+		for _, h := range handlers {
+			h(&exit)
+		}
+		if 0 <= exit {
+			os.Exit(exit)
+		}
 	} else if nil != p {
 		panic(p)
 	}
