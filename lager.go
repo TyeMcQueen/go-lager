@@ -648,27 +648,27 @@ func Guts(cs ...Ctx) Lager { return forLevel(lGuts, cs...) }
 //
 func Level(lev byte, cs ...Ctx) Lager {
 	switch lev {
-	case 'P':
+	case 'P', 'p':
 		return forLevel(lPanic, cs...)
-	case 'E':
+	case 'E', 'e':
 		return forLevel(lExit, cs...)
-	case 'F':
+	case 'F', 'f':
 		return forLevel(lFail, cs...)
-	case 'W':
+	case 'W', 'w':
 		return forLevel(lWarn, cs...)
-	case 'N':
+	case 'N', 'n':
 		return forLevel(lNote, cs...)
-	case 'A':
+	case 'A', 'a':
 		return forLevel(lAcc, cs...)
-	case 'I':
+	case 'I', 'i':
 		return forLevel(lInfo, cs...)
-	case 'T':
+	case 'T', 't':
 		return forLevel(lTrace, cs...)
-	case 'D':
+	case 'D', 'd':
 		return forLevel(lDebug, cs...)
-	case 'O':
+	case 'O', 'o':
 		return forLevel(lObj, cs...)
-	case 'G':
+	case 'G', 'g':
 		return forLevel(lGuts, cs...)
 	}
 	panic(fmt.Sprintf(
