@@ -70,7 +70,7 @@ func (s *serverSuite) TestPing_WithCustomTags() {
 	require.Len(s.T(), msgs, 2, "two log statements should be logged")
 	for _, m := range msgs {
 		last := getMap(m[len(m)-1])
-		assert.Equal(s.T(), "lager_grpc.testproto.TestService", last["grpc.service"], "all lines must contain service name")
+		assert.Equal(s.T(), "grpc_lager.testproto.TestService", last["grpc.service"], "all lines must contain service name")
 		assert.Equal(s.T(), "Ping", last["grpc.method"], "all lines must contain method name")
 		assert.Equal(s.T(), "server", last["span.kind"], "all lines must contain the kind of call (server)")
 		assert.Equal(s.T(), "something", last["custom_tags.string"], "all lines must contain `custom_tags.string`")
@@ -136,7 +136,7 @@ func (s *serverSuite) TestPingError_WithCustomLevels() {
 
 		m := msgs[0]
 		last := getMap(m[len(m)-1])
-		assert.Equal(s.T(), "lager_grpc.testproto.TestService", last["grpc.service"], "all lines must contain service name")
+		assert.Equal(s.T(), "grpc_lager.testproto.TestService", last["grpc.service"], "all lines must contain service name")
 		assert.Equal(s.T(), "PingError", last["grpc.method"], "all lines must contain method name")
 		assert.Equal(s.T(), tcase.code.String(), getMap(m[3])["grpc.code"], "all lines have the correct gRPC code")
 		assert.Equal(s.T(), tcase.level, m[1], tcase.msg)
@@ -178,7 +178,7 @@ func (s *serverOverrideSuite) TestPing_HasOverriddenDuration() {
 
 	for _, m := range msgs {
 		last := getMap(m[len(m)-1])
-		assert.Equal(s.T(), "lager_grpc.testproto.TestService", last["grpc.service"], "all lines must contain service name")
+		assert.Equal(s.T(), "grpc_lager.testproto.TestService", last["grpc.service"], "all lines must contain service name")
 		assert.Equal(s.T(), "Ping", last["grpc.method"], "all lines must contain method name")
 	}
 
@@ -199,7 +199,7 @@ func TestLagerGrpcServerOverrideSuppressedSuite(t *testing.T) {
 	}
 	opts := []grpc_lager.Option{
 		grpc_lager.WithDecider(func(method string, err error) bool {
-			if err != nil && method == "/lager_grpc.testproto.TestService/PingError" {
+			if err != nil && method == "/grpc_lager.testproto.TestService/PingError" {
 				return true
 			}
 			return false
@@ -225,7 +225,7 @@ func (s *serverOverriddenDeciderSuite) TestPing_HasOverriddenDecider() {
 	require.Len(s.T(), msgs, 1, "single log statements should be logged")
 
 	last := getMap(msgs[0][4])
-	assert.Equal(s.T(), "lager_grpc.testproto.TestService", last["grpc.service"], "all lines must contain service name")
+	assert.Equal(s.T(), "grpc_lager.testproto.TestService", last["grpc.service"], "all lines must contain service name")
 	assert.Equal(s.T(), "Ping", last["grpc.method"], "all lines must contain method name")
 	assert.Equal(s.T(), "some ping", msgs[0][2], "handler's message must contain user message")
 }
@@ -243,7 +243,7 @@ func (s *serverOverriddenDeciderSuite) TestPingError_HasOverriddenDecider() {
 	require.Len(s.T(), msgs, 1, "only the interceptor log message is printed in PingErr")
 	m := msgs[0]
 	last := getMap(m[len(m)-1])
-	assert.Equal(s.T(), "lager_grpc.testproto.TestService", last["grpc.service"], "all lines must contain service name")
+	assert.Equal(s.T(), "grpc_lager.testproto.TestService", last["grpc.service"], "all lines must contain service name")
 	assert.Equal(s.T(), "PingError", last["grpc.method"], "all lines must contain method name")
 	assert.Equal(s.T(), code.String(), getMap(m[3])["grpc.code"], "all lines must contain the correct gRPC code")
 	assert.Equal(s.T(), "INFO", m[1], msg)
@@ -278,7 +278,7 @@ func (s *serverMessageProducerSuite) TestPing_HasOverriddenMessageProducer() {
 
 	for _, m := range msgs {
 		last := getMap(m[len(m)-1])
-		assert.Equal(s.T(), "lager_grpc.testproto.TestService", last["grpc.service"], "all lines must contain service name")
+		assert.Equal(s.T(), "grpc_lager.testproto.TestService", last["grpc.service"], "all lines must contain service name")
 		assert.Equal(s.T(), "Ping", last["grpc.method"], "all lines must contain method name")
 	}
 	assert.Equal(s.T(), "some ping", msgs[0][2], "handler's message must contain user message")
