@@ -370,7 +370,7 @@ func setLevels(levels string) func(*globals) {
 			g.lagers[int(l)] = noop{}
 		}
 		if "" == levels {
-			levels = "FW"
+			levels = "FWNA"
 		}
 		enabled := make([]byte, 0, 9)
 		for _, c := range levels {
