@@ -60,7 +60,7 @@ func (s *payloadSuite) TestPing_LogsBothRequestAndResponse() {
 	for _, m := range serverMsgs {
 		level := m[1]
 		last := m[len(m)-1].(map[string]interface{})
-		assert.Equal(s.T(), "lager_grpc.testproto.TestService", last["grpc.service"], "all lines must contain service name")
+		assert.Equal(s.T(), "grpc_lager.testproto.TestService", last["grpc.service"], "all lines must contain service name")
 		assert.Equal(s.T(), "Ping", last["grpc.method"], "all lines must contain method name")
 		assert.Equal(s.T(), "ACCESS", level, "all payloads must be logged on access level")
 	}
@@ -80,7 +80,7 @@ func (s *payloadSuite) TestPingError_LogsOnlyRequestsOnError() {
 	for _, m := range serverMsgs {
 		level := m[1]
 		last := m[len(m)-1].(map[string]interface{})
-		assert.Equal(s.T(), "lager_grpc.testproto.TestService", last["grpc.service"], "all lines must contain service name")
+		assert.Equal(s.T(), "grpc_lager.testproto.TestService", last["grpc.service"], "all lines must contain service name")
 		assert.Equal(s.T(), "PingError", last["grpc.method"], "all lines must contain method name")
 		assert.Equal(s.T(), "ACCESS", level, "must be logged at the access level")
 	}
