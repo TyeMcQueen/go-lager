@@ -38,7 +38,28 @@ type globals struct {
 }
 
 // 'Lager' is the interface returned from lager.Warn() and the other
-// log-level selectors.
+// log-level selectors.  Of the several of its methods that can write log
+// lines, MMap() is often the one you should use.
+//
+// The [C][M]Map() log-writing methods can take a list of key/value pairs
+// as their final arguments.  There are special keys and types of values
+// that get special handling.  The [C][M]List() log-writing methods can
+// take a list of arbitrary values as their final arguments and the special
+// value types apply to those as well.
+//
+// You can use lager.InlinePairs as a key to have a pair-containing value
+// be treated as if its pairs were passed in directly.
+//
+// You can use a call to lager.Unless() as a key to make inclusion of that
+// key/value pair optional.
+//
+// A value of type 'func() interface{}' will be called so its return value
+// can be logged; potentially saving an expensive call when the log level
+// is disabled or when lager.Unless() causes the key/value pair to be
+// ignored.  [Note:  If more than about 16KiB of that log line has been
+// generated before such a value is reached, then we only wait 10ms for
+// the function to finish as a lock is held in that case.]
+//
 type Lager interface {
 
 	// The List() method writes a single log line in JSON format including a
