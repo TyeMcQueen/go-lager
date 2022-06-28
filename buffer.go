@@ -319,11 +319,29 @@ func (b *buffer) rawPairs(m RawMap) {
 	}
 }
 
+// Call a function but only give it a very short time to finish if we
+// are holding the lager output lock.
+func (b *buffer) timeBoxedCall(f func() interface{}) (value interface{}) {
+	if !b.locked {
+		return f()
+	}
+
+	values := make(chan interface{}, 1)
+	go func() { values <- f() }()
+	timeouts := time.After(10*time.Millisecond)
+	select {
+	case value = <-values:
+	case <-timeouts:
+		value = "func call took more than 10ms while lager lock held" +
+			" (log line was already over 16KiB)"
+	}
+	return
+}
+
 // Append a JSON-encoded scalar value to the log line.
 func (b *buffer) scalar(s interface{}) {
-	switch v := s.(type) {
-	case func() interface{}:
-		s = v()
+	if f, ok := s.(func() interface{}); ok {
+		s = b.timeBoxedCall(f)
 	}
 	switch v := s.(type) {
 	case AMap:
