@@ -112,30 +112,32 @@ func (b *buffer) write(strs ...string) {
 	}
 }
 
-func escapeByte(c byte) string {
-	switch c {
+func (b *buffer) escape1Rune(r rune) {
+	b.write("\\uXXXX")
+	end := len(b.buf) - 5
+	switch r {
 	case '"':
-		return "\\\""
+		b.buf[end] = '"'
 	case '\\':
-		return "\\\\"
+		b.buf[end] = '\\'
 	case '\b':
-		return "\\b"
+		b.buf[end] = 'b'
 	case '\f':
-		return "\\f"
+		b.buf[end] = 'f'
 	case '\n':
-		return "\\n"
+		b.buf[end] = 'n'
 	case '\r':
-		return "\\r"
+		b.buf[end] = 'r'
 	case '\t':
-		return "\\t"
+		b.buf[end] = 't'
+	default:
+		for o := 1; o <= 4; o++ {
+			b.buf[len(b.buf)-o] = hexDigits[r&0xF]
+			r >>= 4
+		}
+		return
 	}
-	buf := []byte("\\u0000")
-	for o := 5; 1 < o; o-- {
-		h := c & 0xF
-		buf[o] = hexDigits[h]
-		c >>= 4
-	}
-	return string(buf)
+	b.buf = b.buf[:end+1]
 }
 
 // Append a quoted (JSON) string to the log line.  If more than one string
@@ -165,7 +167,7 @@ func (b *buffer) escape(s string) {
 			continue
 		}
 		b.write(s[beg:i])
-		b.write(escapeByte(c))
+		b.escape1Rune(rune(c))
 		beg = i + 1
 	}
 	b.write(s[beg:])
@@ -179,7 +181,7 @@ func (b *buffer) escapeBytes(s []byte) {
 			continue
 		}
 		b.writeBytes(s[beg:i])
-		b.write(escapeByte(c))
+		b.escape1Rune(rune(c))
 		beg = i + 1
 	}
 	b.writeBytes(s[beg:])
