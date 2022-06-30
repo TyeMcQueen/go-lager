@@ -2,9 +2,12 @@ package lager
 
 import (
 	"fmt"
-	"path/filepath"
+	"os"
 	"runtime"
+	"strings"
 )
+
+var _pathSep = string(os.PathSeparator)
 
 func caller(depth, pathparts int) (string, int) {
 	_, file, line, ok := runtime.Caller(2 + depth)
@@ -15,10 +18,10 @@ func caller(depth, pathparts int) (string, int) {
 		pathparts = PathParts
 	}
 	if 0 < pathparts {
-		parts := filepath.SplitList(file)
+		parts := strings.Split(file, _pathSep)
 		if pathparts < len(parts) {
 			l := len(parts)
-			file = filepath.Join(parts[l-pathparts : l]...)
+			file = strings.Join(parts[l-pathparts : l], _pathSep)
 		}
 	}
 	return file, line
