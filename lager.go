@@ -812,12 +812,14 @@ func (l *logger) end(b *buffer) {
 		// 0: skip end(), 1: skip MMap() etc, 2: get caller of MMap() etc:
 		l = l.WithStack(2, 0).(*logger)
 	}
-	if nil == l.g.keys {
-		b.scalar(l.kvp)
-	} else if "" == l.g.keys.ctx {
-		b.pairs(l.kvp)
-	} else {
-		b.pair(l.g.keys.ctx, l.kvp)
+	if nil != l.kvp && 0 < len(l.kvp.keys) {
+		if nil == l.g.keys {
+			b.scalar(l.kvp)
+		} else if "" == l.g.keys.ctx {
+			b.pairs(l.kvp)
+		} else {
+			b.pair(l.g.keys.ctx, l.kvp)
+		}
 	}
 
 	if "" != l.mod {
@@ -856,7 +858,13 @@ func (l *logger) Println(args ...interface{}) { l.List(args...) }
 func (l *logger) List(args ...interface{}) {
 	b := l.start()
 	if nil == l.g.keys {
-		b.scalar(args)
+		if 0 == len(args) {
+			b.write(", []")
+		} else if 1 == len(args) {
+			b.scalar(args[0])
+		} else {
+			b.scalar(args)
+		}
 	} else if 1 == len(args) && "" != l.g.keys.msg {
 		b.pair(l.g.keys.msg, args[0])
 		if l.g.inGcp && (nil == l.kvp || 0 == len(l.kvp.keys)) {
@@ -872,11 +880,10 @@ func (l *logger) List(args ...interface{}) {
 func (l *logger) MList(message string, args ...interface{}) {
 	b := l.start()
 	if nil == l.g.keys {
-		if 0 < len(args) {
-			b.scalar(List(message, args))
+		if 0 == len(args) {
+			b.scalar(message)
 		} else {
-			// Put the single item in a list for sake of consistency:
-			b.scalar(List(message))
+			b.msgList(message, args)
 		}
 	} else if "" != l.g.keys.msg {
 		b.pair(l.g.keys.msg, message)
@@ -886,7 +893,9 @@ func (l *logger) MList(message string, args ...interface{}) {
 			b.pair("json", 1) // Keep jsonPayload.message not textPayload
 		}
 	} else if 0 < len(args) {
-		b.pair(l.g.keys.args, List(message, args))
+		b.quote(l.g.keys.args)
+		b.colon()
+		b.msgList(message, args)
 	} else {
 		// Put the single item in a list for sake of consistency:
 		b.pair(l.g.keys.args, List(message))
@@ -910,7 +919,9 @@ func (l *logger) MMap(message string, pairs ...interface{}) {
 	b := l.start()
 	if nil == l.g.keys {
 		b.scalar(message)
-		b.scalar(RawMap(pairs))
+		if 0 < len(pairs) {
+			b.scalar(RawMap(pairs))
+		}
 	} else {
 		key := l.g.keys.msg
 		if "" == key {

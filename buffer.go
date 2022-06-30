@@ -428,16 +428,17 @@ func (b *buffer) inlineList(args []interface{}) {
 	}
 }
 
+func (b *buffer) msgList(msg string, args []interface{}) {
+	b.open("[")
+	b.scalar(msg)
+	b.inlineList(args)
+	b.close("]")
+}
+
 // Append a JSON-encoded scalar value to the log line.
 func (b *buffer) scalar(s interface{}) {
 	if f, ok := s.(func() interface{}); ok {
 		s = b.timeBoxedCall(f)
-	}
-	switch v := s.(type) {
-	case AMap:
-		if nil == v || 0 == len(v.keys) {
-			return
-		}
 	}
 	b.write(b.delim)
 	b.delim = ""

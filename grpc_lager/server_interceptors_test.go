@@ -89,7 +89,7 @@ func (s *serverSuite) TestPing_WithCustomTags() {
 	// The message logged in the gRPC service handler directly after adding pairs to the context should contain the custom_field,
 	// any message logged in an interceptor will not have this new context since it is never passed. This is expected behavior,
 	// other logging libraries work around this by updating values of an existing context rather than creating a new one.
-	assert.Equal(s.T(), "custom_value", getMap(msgs[0][4])["custom_field"], "first message must contain `custom_field`")
+	assert.Equal(s.T(), "custom_value", getMap(msgs[0][3])["custom_field"], "first message must contain `custom_field`")
 
 	assert.Equal(s.T(), "some ping", msgs[0][2], "handler's message must contain user message")
 
@@ -188,7 +188,7 @@ func (s *serverOverrideSuite) TestPing_HasOverriddenDuration() {
 
 	assert.Equal(s.T(), "finished unary call with code OK", msgs[1][2], "handler's message must contain user message")
 	assert.Equal(s.T(), "INFO", msgs[1][1], "OK error codes must be logged on info level.")
-	assert.NotContains(s.T(), getMap(msgs[1][4]), "grpc.time_ms", "handler's message must not contain default duration")
+	assert.NotContains(s.T(), getMap(msgs[1][3]), "grpc.time_ms", "handler's message must not contain default duration")
 	assert.Contains(s.T(), getMap(msgs[1][4]), "grpc.duration", "handler's message must contain overridden duration")
 }
 
@@ -224,7 +224,7 @@ func (s *serverOverriddenDeciderSuite) TestPing_HasOverriddenDecider() {
 	msgs := s.getOutputJSONs()
 	require.Len(s.T(), msgs, 1, "single log statements should be logged")
 
-	last := getMap(msgs[0][4])
+	last := getMap(msgs[0][3])
 	assert.Equal(s.T(), "grpc_lager.testproto.TestService", last["grpc.service"], "all lines must contain service name")
 	assert.Equal(s.T(), "Ping", last["grpc.method"], "all lines must contain method name")
 	assert.Equal(s.T(), "some ping", msgs[0][2], "handler's message must contain user message")
