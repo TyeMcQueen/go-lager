@@ -267,7 +267,7 @@ var PathParts = 0
 // level name.  If the environment variable LAGER_GCP is non-empty, then
 // it instead defaults to using GcpLevelName().
 //
-var LevelNotation = func(lev string) string { return lev }
+var LevelNotation = identLevelNotation
 
 // The special value passed to panic() [see ExitViaPanic()].
 var _panicToExit = fakePanic("panic() from lager.Exit()")
@@ -484,9 +484,16 @@ func SetPathParts(pathParts int) {
 // such a function is GcpLevelName().  If you write such a function, you
 // would usually just key off the first letter of the passed-in level name.
 //
+// Passing in 'nil' for 'mapper' resets to the default behavior.
+//
 func SetLevelNotation(mapper func(string) string) {
+	if nil == mapper {
+		mapper = identLevelNotation
+	}
 	LevelNotation = mapper
 }
+
+func identLevelNotation(lev string) string { return lev }
 
 // ExitViaPanic() improves the way lager.Exit() works so that uses of it
 // in inappropriate places are less problematic.  Using lager.Exit() causes
