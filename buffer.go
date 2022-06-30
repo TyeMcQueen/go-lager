@@ -40,7 +40,7 @@ var bufPool = sync.Pool{New: func() interface{} {
 }}
 
 // A lock in case a log line is too large to buffer.
-var outMu sync.Mutex
+var outMu sync.RWMutex
 
 // The (JSON) delimiter between values:
 const comma = ", "
@@ -72,6 +72,10 @@ func (b *buffer) lock() {
 
 // Called when finished composing a log line.
 func (b *buffer) unlock() {
+	if !b.locked {
+		outMu.RLock()
+		defer outMu.RUnlock()
+	}
 	if 0 < len(b.buf) {
 		b.w.Write(b.buf)
 		b.buf = b.scratch[0:0]
