@@ -11,6 +11,8 @@ import (
 	"strconv"
 	"sync"
 	"time"
+	"unicode/utf16"
+	"unicode/utf8"
 )
 
 /// TYPES ///
@@ -48,10 +50,10 @@ const comma = ", "
 /// FUNCS ///
 
 var noEsc [256]bool
-var hexDigits = "0123456789abcdef"
+var hexDigits = "0123456789ABCDEF"
 
 func init() {
-	for c := ' '; c < 256; c++ {
+	for c := ' '; c < 127; c++ {
 		noEsc[c] = true
 	}
 	noEsc['"'] = false
@@ -140,6 +142,48 @@ func (b *buffer) escape1Rune(r rune) {
 	b.buf = b.buf[:end+1]
 }
 
+func (b *buffer) writeByteHex(c byte) {
+	b.write("  ")
+	b.buf[len(b.buf)-2] = hexDigits[c>>4]
+	b.buf[len(b.buf)-1] = hexDigits[c&0xF]
+}
+
+func (b *buffer) nonUtf8Chars(s string) int {
+	b.write("«x")
+	i := 0
+	for {
+		b.writeByteHex(s[i])
+		i++
+		if i == len(s) {
+			break
+		}
+		r, rl := utf8.DecodeRuneInString(s[i:])
+		if !(r == utf8.RuneError && 1 == rl || 0x110000 <= r) {
+			break
+		}
+	}
+	b.write("»")
+	return i
+}
+
+func (b *buffer) nonUtf8Bytes(s []byte) int {
+	b.write("«x")
+	i := 0
+	for {
+		b.writeByteHex(s[i])
+		i++
+		if i == len(s) {
+			break
+		}
+		r, rl := utf8.DecodeRune(s[i:])
+		if !(r == utf8.RuneError && 1 == rl || 0x110000 <= r) {
+			break
+		}
+	}
+	b.write("»")
+	return i
+}
+
 // Append a quoted (JSON) string to the log line.  If more than one string
 // is passed in, then they are concatenated together.
 func (b *buffer) quote(strs ...string) {
@@ -167,8 +211,27 @@ func (b *buffer) escape(s string) {
 			continue
 		}
 		b.write(s[beg:i])
-		b.escape1Rune(rune(c))
-		beg = i + 1
+		if c < 128 {
+			b.escape1Rune(rune(c))
+			beg = i + 1
+		} else if r, rl := utf8.DecodeRuneInString(
+			s[i:],
+		); r == utf8.RuneError && 1 == rl || 0x110000 <= r {
+			beg = i + b.nonUtf8Chars(s[i:])
+			i = beg - 1
+		} else {
+			beg = i + rl
+			if 0xFFFF < r {
+				surr1, surr2 := utf16.EncodeRune(r)
+				b.escape1Rune(surr1)
+				b.escape1Rune(surr2)
+			} else if r < 0xA0 {
+				b.escape1Rune(r)
+			} else {
+				b.write(s[i:beg])
+			}
+			i = beg - 1
+		}
 	}
 	b.write(s[beg:])
 }
@@ -182,8 +245,27 @@ func (b *buffer) escapeBytes(s []byte) {
 			continue
 		}
 		b.writeBytes(s[beg:i])
-		b.escape1Rune(rune(c))
-		beg = i + 1
+		if c < 128 {
+			b.escape1Rune(rune(c))
+			beg = i + 1
+		} else if r, rl := utf8.DecodeRune(
+			s[i:],
+		); r == utf8.RuneError && 1 == rl || 0x110000 <= r {
+			beg = i + b.nonUtf8Bytes(s[i:])
+			i = beg - 1
+		} else {
+			beg = i + rl
+			if 0xFFFF < r {
+				surr1, surr2 := utf16.EncodeRune(r)
+				b.escape1Rune(surr1)
+				b.escape1Rune(surr2)
+			} else if r < 0xA0 {
+				b.escape1Rune(r)
+			} else {
+				b.writeBytes(s[i:beg])
+			}
+			i = beg - 1
+		}
 	}
 	b.writeBytes(s[beg:])
 }

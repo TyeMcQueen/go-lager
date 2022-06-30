@@ -41,6 +41,14 @@ type globals struct {
 // log-level selectors.  Of the several of its methods that can write log
 // lines, MMap() is often the one you should use.
 //
+// For strings that contain bytes that do not form valid UTF-8, Lager will
+// produce valid JSON output.  Since logs can be important in diagnosing
+// problems, the non-UTF-8 parts of such strings are not replaced with the
+// Unicode Replacement character ('\uFFFD') so any such characters in the
+// logs indicate that '\uFFFD' was in the original string.  Instead, each
+// run of non-UTF-8 bytes is replaced by a string like "«xABC0»" that will
+// contain 2 base-16 digits per byte.
+//
 // The [C][M]Map() log-writing methods can take a list of key/value pairs
 // as their final arguments.  There are special keys and types of values
 // that get special handling.  The [C][M]List() log-writing methods can
