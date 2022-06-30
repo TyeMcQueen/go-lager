@@ -451,9 +451,18 @@ func setLevels(levels string) func(*globals) {
 // to os.Stdout (for most log levels) and to os.Stderr (for Panic and Exit
 // levels).
 //
-func SetOutput(writer io.Writer) {
+// You can temporarily redirect logs via:
+//
+//      defer lager.SetOutput(writer)()
+//      //                           ^^ Note required final parens!
+//
+func SetOutput(writer io.Writer) func() {
+	prior := OutputDest
 	// TODO: write safe version
 	OutputDest = writer
+	return func() {
+		OutputDest = prior
+	}
 }
 
 // SetPathParts() sets how many path components to include in the source
