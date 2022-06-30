@@ -5,6 +5,7 @@ package lager
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"io"
 	"sort"
 	"strconv"
@@ -385,9 +386,23 @@ func (b *buffer) scalar(s interface{}) {
 	case uint64:
 		b.buf = strconv.AppendUint(b.buf, v, 10)
 	case float32:
+		needsQuotes := math.IsInf(float64(v), 0) || math.IsNaN(float64(v))
+		if needsQuotes {
+			b.buf = append(b.buf, '"')
+		}
 		b.buf = strconv.AppendFloat(b.buf, float64(v), 'g', -1, 32)
+		if needsQuotes {
+			b.buf = append(b.buf, '"')
+		}
 	case float64:
+		needsQuotes := math.IsInf(v, 0) || math.IsNaN(v)
+		if needsQuotes {
+			b.buf = append(b.buf, '"')
+		}
 		b.buf = strconv.AppendFloat(b.buf, v, 'g', -1, 64)
+		if needsQuotes {
+			b.buf = append(b.buf, '"')
+		}
 	case bool:
 		if v {
 			b.write("true")
