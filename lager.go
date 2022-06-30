@@ -363,7 +363,7 @@ func firstInit() {
 	}
 
 	if "" != os.Getenv("LAGER_GCP") {
-		setRunningInGcp()(&g)
+		setRunningInGcp(true)(&g)
 	}
 
 	if k := os.Getenv("LAGER_KEYS"); "" != k {

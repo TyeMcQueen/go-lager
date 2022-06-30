@@ -79,21 +79,26 @@ func GcpProjectID(ctx Ctx) (string, error) {
 // transformed into textPayload when the log is ingested into Cloud Logging.
 //
 func RunningInGcp() {
-	updateGlobals(setRunningInGcp())
+	updateGlobals(setRunningInGcp(true))
 }
 
 // How GCP options are set safely.
-func setRunningInGcp() func(*globals) {
+func setRunningInGcp(enabled bool) func(*globals) {
 	return func(g *globals) {
-		g.inGcp = true
-		if "" == os.Getenv("LAGER_KEYS") {
-			g.keys = &keyStrs{
-				when: "time", lev: "severity", msg: "message",
-				args: "data", mod: "module", ctx: "",
+		g.inGcp = enabled
+		if enabled {
+			if "" == os.Getenv("LAGER_KEYS") {
+				g.keys = &keyStrs{
+					when: "time", lev: "severity", msg: "message",
+					args: "data", mod: "module", ctx: "",
+				}
 			}
+			// TODO: g.levDesc = GcpLevelName
+			SetLevelNotation(GcpLevelName)
+		} else {
+			// TODO: g.levDesc = identLevelNotation
+			SetLevelNotation(nil)
 		}
-		// TODO: g.levDesc = GcpLevelName
-		SetLevelNotation(GcpLevelName)
 	}
 }
 
