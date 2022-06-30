@@ -438,7 +438,7 @@ func setLevels(levels string) func(*globals) {
 				continue
 			}
 			b := byte(c)
-			if !bytes.Contains([]byte{b}, enabled) {
+			if !bytes.Contains(enabled, []byte{b}) {
 				enabled = append(enabled, b)
 			}
 		}
