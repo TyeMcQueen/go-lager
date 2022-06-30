@@ -102,12 +102,7 @@ func (b *buffer) write(strs ...string) {
 		if cap(b.buf) < len(s) {
 			io.WriteString(b.w, s)
 		} else {
-			was := len(b.buf)
-			will := was + len(s)
-			b.buf = b.buf[0:will]
-			for i := 0; i < len(s); i++ {
-				b.buf[was+i] = s[i]
-			}
+			b.buf = append(b.buf, s...)
 		}
 	}
 }
@@ -176,7 +171,8 @@ func (b *buffer) escape(s string) {
 // Append an escaped string (from a byte slice), part of a quoted JSON string.
 func (b *buffer) escapeBytes(s []byte) {
 	beg := 0
-	for i, c := range s {
+	for i := 0; i < len(s); i++ {
+		c := s[i]
 		if noEsc[c] {
 			continue
 		}
@@ -221,9 +217,10 @@ func (b *buffer) int(val int, digits int) {
 
 // Append a quoted UTC timestamp to the log line.
 func (b *buffer) timestamp() {
-	if cap(b.buf) < len(b.buf)+22 {
-		b.lock()
-	}
+	// Never needed since timestamp is always first:
+	//  if cap(b.buf) < len(b.buf)+22 {
+	//      b.lock()
+	//  }
 	now := time.Now().In(time.UTC)
 	b.write(`"`)
 	yr, mo, day := now.Date()
@@ -338,6 +335,12 @@ func (b *buffer) timeBoxedCall(f func() interface{}) (value interface{}) {
 	return
 }
 
+func (b *buffer) inlineList(args []interface{}) {
+	for _, arg := range args {
+		b.scalar(arg)
+	}
+}
+
 // Append a JSON-encoded scalar value to the log line.
 func (b *buffer) scalar(s interface{}) {
 	if f, ok := s.(func() interface{}); ok {
@@ -399,9 +402,7 @@ func (b *buffer) scalar(s interface{}) {
 		b.close("]")
 	case AList:
 		b.open("[")
-		for _, s := range v {
-			b.scalar(s)
-		}
+		b.inlineList(v)
 		b.close("]")
 	case RawMap:
 		b.open("{")
