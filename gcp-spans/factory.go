@@ -26,6 +26,11 @@ const _contextSpan = inContext("span")
 // read-only (hence "RO"), only dealing with spans created elsewhere
 // and no changes can be made to them.
 //
+// NewSubSpan() always returns 'nil'.  The other New*() methods always
+// return an empty span.  Methods that should log when called on an empty
+// span also do not log for ROSpans since those methods do nothing even
+// if the span is not empty.
+//
 type ROSpan struct {
 	proj    string
 	traceID string
@@ -224,7 +229,7 @@ func HexSpanID(spanID uint64) string {
 //      defer spans.FinishSpan(span)
 //
 func FinishSpan(span Factory) {
-	if nil != span {
+	if nil != span && 0 != span.GetSpanID() && !span.GetStart().IsZero() {
 		span.Finish()
 	}
 }
@@ -327,7 +332,7 @@ func (s ROSpan) SetStatusCode(_ int64)     {}
 func (s ROSpan) SetStatusMessage(_ string) {}
 
 func (s ROSpan) NewTrace() Factory {
-	return nil
+	return ROSpan{proj: s.proj}
 }
 
 func (s ROSpan) NewSubSpan() Factory {
@@ -335,7 +340,7 @@ func (s ROSpan) NewSubSpan() Factory {
 }
 
 func (s ROSpan) NewSpan() Factory {
-	return nil
+	return ROSpan{proj: s.proj}
 }
 
 func (s ROSpan) AddAttribute(_ string, _ interface{}) error {
