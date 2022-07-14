@@ -26,6 +26,10 @@ const _contextSpan = inContext("span")
 // read-only (hence "RO"), only dealing with spans created elsewhere
 // and no changes can be made to them.
 //
+// The only non-trivial methods for ROSpan are Import() and ImportFromHeader()
+// and then, on such imported spans: GetSpanID(), GetTraceID(),
+// GetTracePath(), GetSpanPath(), GetCloudContext(), and SetHeader().
+//
 // NewSubSpan() always returns 'nil'.  The other New*() methods always
 // return an empty span.  Methods that should log when called on an empty
 // span also do not log for ROSpans since those methods do nothing even
@@ -224,14 +228,15 @@ func HexSpanID(spanID uint64) string {
 }
 
 // FinishSpan() calls Finish() on the passed-in 'span', unless it is 'nil'.
-// It is meant to be used with 'defer' when a 'span' might be 'nil':
+// It is most useful with 'defer' when a 'span' might be 'nil':
 //
 //      defer spans.FinishSpan(span)
 //
-func FinishSpan(span Factory) {
+func FinishSpan(span Factory) time.Duration {
 	if nil != span && 0 != span.GetSpanID() && !span.GetStart().IsZero() {
-		span.Finish()
+		return span.Finish()
 	}
+	return time.Duration(0)
 }
 
 // NewROSpan() returns an empty Factory.
