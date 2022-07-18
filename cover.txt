@@ -1,11 +1,11 @@
 100.0%  buffer.go
 100.0%  data.go
 100.0%  gcp-spans/factory.go
-  9.2%  gcp.go
+  9.0%  gcp.go
 100.0%  grpc_lager/context.go
  61.9%  grpc_lager/options.go
  91.7%  grpc_lager/payload_interceptors.go
 100.0%  grpc_lager/server_interceptors.go
- 98.7%  lager.go
+ 97.4%  lager.go
  48.9%  module.go
 100.0%  stack.go
