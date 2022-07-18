@@ -5,8 +5,8 @@ package lager
 import (
 	"encoding/json"
 	"fmt"
-	"math"
 	"io"
+	"math"
 	"sort"
 	"strconv"
 	"sync"
@@ -412,7 +412,7 @@ func (b *buffer) timeBoxedCall(f func() interface{}) (value interface{}) {
 
 	values := make(chan interface{}, 1)
 	go func() { values <- f() }()
-	timeouts := time.After(10*time.Millisecond)
+	timeouts := time.After(10 * time.Millisecond)
 	select {
 	case value = <-values:
 	case <-timeouts:
