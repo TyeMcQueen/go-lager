@@ -23,7 +23,7 @@ type globals struct {
 	// A Lager singleton for each log level (some will be noops).
 	lagers [int(nLevels)]Lager
 
-	// What key strings to use (if any):
+	// What key strings to use (if any).
 	keys *keyStrs
 
 	// The currently enabled log levels (used in module.go).
@@ -35,6 +35,9 @@ type globals struct {
 
 	// Add '"json": 1' when jsonPayload.text would become textPayload?
 	inGcp bool
+
+	// Used when setting Display Name of a Span.
+	spanPrefix string
 }
 
 // 'Lager' is the interface returned from lager.Warn() and the other
@@ -354,6 +357,11 @@ func firstInit() {
 	g.lagers[int(lPanic)] = &logger{lev: lPanic}
 	g.lagers[int(lExit)] = &logger{lev: lExit}
 	setLevels(os.Getenv("LAGER_LEVELS"))(&g)
+
+	g.spanPrefix = os.Getenv("LAGER_SPAN_PREFIX")
+	if "" == g.spanPrefix {
+		g.spanPrefix = os.Args[0]
+	}
 
 	// Update the g pointer in all loggers to the new globals:
 	for _, l := range g.lagers {
@@ -771,6 +779,22 @@ func Keys(when, lev, msg, args, ctx, mod string) {
 	updateGlobals(setKeys(&keyStrs{
 		when: when, lev: lev, msg: msg, args: args, ctx: ctx, mod: mod,
 	}))
+}
+
+// GetSpanPrefix() returns a string to be used as the prefix for the Display
+// Name of trace spans.  It defaults to os.Getenv("LAGER_SPAN_PREFIX") or,
+// if that is not set, to 'os.Args[0]'.
+//
+func GetSpanPrefix() string {
+	return getGlobals().spanPrefix
+}
+
+// SetSpanPrefix() sets the span name prefix [see GetSpanPrefix()].
+//
+func SetSpanPrefix(prefix string) {
+	updateGlobals(func(g *globals) {
+		g.spanPrefix = prefix
+	})
 }
 
 // See the Lager interface for documentation.

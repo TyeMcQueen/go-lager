@@ -340,8 +340,9 @@ func GcpContextAddTrace(ctx Ctx, span spans.Factory) Ctx {
 // If 'ctx' contains a spans.Factory, then that is fetched and used to
 // create either a new sub-span or (if there is no CloudTrace context in
 // the headers) a new trace (and span).  If the Factory is able to create
-// a new span, then it is marked as a "SERVER" span and it is stored in
-// the context via spans.ContextStoreSpan().
+// a new span, then it is marked as a "SERVER" span, its Display Name is
+// set to GetSpanPrefix() + " request in", and it is stored in the context
+// via spans.ContextStoreSpan().
 //
 // If a span was imported or created, then the span information is added
 // to the Context as pairs to be logged [see GcpContextAddTrace()] and
@@ -381,6 +382,7 @@ func GcpContextReceivedRequest(
 		span = span.ImportFromHeaders(req.Header)
 		if sub := span.NewSpan(); nil != sub {
 			span = sub
+			span.SetDisplayName(GetSpanPrefix() + " request in")
 			span.SetIsServer()
 			ctx = spans.ContextStoreSpan(ctx, span)
 		}
@@ -397,7 +399,7 @@ func GcpContextReceivedRequest(
 //
 //      defer spans.FinishSpan(lager.GcpReceivedRequest(&req))
 // or
-//      var resp *http.Response
+//      var resp *http.Response // Will be set in later code
 //      defer lager.GcpSendingResponse(
 //          lager.GcpReceivedRequest(&req), req, resp)
 //
@@ -406,8 +408,6 @@ func GcpContextReceivedRequest(
 // Request or will not attach the new Context to the Request (or will adjust
 // it further before attaching it) since each time WithContext() is called
 // on a Request, the Request must be copied.
-//
-// The spans package is from "github.com/TyeMcQueen/tools-gcp/trace/spans".
 //
 func GcpReceivedRequest(pReq **http.Request) spans.Factory {
 	ctx, span := GcpContextReceivedRequest((*pReq).Context(), *pReq)
@@ -422,11 +422,12 @@ func GcpReceivedRequest(pReq **http.Request) spans.Factory {
 // The current span is fetched from 'ctx' [such as the one placed there
 // by GcpReceivedRequest() when the original request was received].  A new
 // sub-span is created, if possible.  If so, then it is marked as a "CLIENT"
-// span, it is stored in the Context via spans.ContextStoreSpan(), the
-// returned Factory will contain the new span, and the updated Context will
-// contain 2 pairs (to be logged) from the new span.  Note that the original
-// Context is not (cannot be) modified, so the trace/span pair logged after
-// the request-sending function returns will revert to the prior span.
+// span, its Display Name is set to GetSpanPrefix() + " request out", it is
+// stored in the Context via spans.ContextStoreSpan(), the returned Factory
+// will contain the new span, and the updated Context will contain 2 pairs
+// (to be logged) from the new span.  Note that the original Context is not
+// (cannot be) modified, so the trace/span pair logged after the
+// request-sending function returns will revert to the prior span.
 //
 // If a span was found or created, then its CloudContext is added to the
 // headers for 'req' so that the dependent service can log it and add its
@@ -445,12 +446,15 @@ func GcpReceivedRequest(pReq **http.Request) spans.Factory {
 //
 // See also GcpSendingRequest().
 //
-func GcpContextSendingRequest(req *http.Request, ctx Ctx) (Ctx, spans.Factory) {
+func GcpContextSendingRequest(
+	req *http.Request, ctx Ctx,
+) (Ctx, spans.Factory) {
 	span := spans.ContextGetSpan(ctx)
 	if nil != span {
 		subspan := span.NewSpan()
 		if nil != subspan {
 			span = subspan
+			span.SetDisplayName(GetSpanPrefix() + " request out")
 			span.SetIsClient()
 			ctx = spans.ContextStoreSpan(ctx, span)
 			ctx = GcpContextAddTrace(ctx, span)
@@ -506,14 +510,14 @@ func GcpSendingRequest(pReq **http.Request) spans.Factory {
 // http.Response and Finish()es the span (which registers it with GCP).
 //
 func GcpFinishSpan(span spans.Factory, resp *http.Response) time.Duration {
-	if !span.GetStart().IsZero() {
-		span.SetStatusCode(int64(resp.StatusCode))
-		if "" != resp.Status {
-			span.SetStatusMessage(resp.Status)
-		}
-		return span.Finish()
+	if span.GetStart().IsZero() {
+		return time.Duration(0)
 	}
-	return time.Duration(0)
+	span.SetStatusCode(int64(resp.StatusCode))
+	if "" != resp.Status {
+		span.SetStatusMessage(resp.Status)
+	}
+	return span.Finish()
 }
 
 // GcpSendingResponse() does several things that are useful when a server
