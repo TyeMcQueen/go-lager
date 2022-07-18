@@ -239,7 +239,7 @@ func TestData(t *testing.T) {
 		strings.Repeat("ohno!", 4*1024),
 		"slow",
 		func() interface{} {
-			time.Sleep(11*time.Millisecond)
+			time.Sleep(11 * time.Millisecond)
 			return "okay"
 		},
 		lager.Unless(false, "fast"),
@@ -268,8 +268,8 @@ func TestData(t *testing.T) {
 		uint8(8), uint16(16), uint32(32), uint64(64), uint(1),
 		float32(1.32),
 		[]byte("[]byte"),
-		[]string{"[]","string"},
-		map[string]interface {}{
+		[]string{"[]", "string"},
+		map[string]interface{}{
 			"string": "interface{}",
 		},
 		io.EOF,

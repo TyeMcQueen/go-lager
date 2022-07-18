@@ -15,8 +15,8 @@ type TestSpan struct {
 	finishes int
 }
 
-func (ts TestSpan) GetSpanID() uint64 { return 20 }
-func (ts TestSpan) GetStart() time.Time { return time.Now() }
+func (ts TestSpan) GetSpanID() uint64      { return 20 }
+func (ts TestSpan) GetStart() time.Time    { return time.Now() }
 func (ts *TestSpan) Finish() time.Duration { ts.finishes++; return 0 }
 
 func TestSpans(t *testing.T) {
@@ -121,7 +121,7 @@ func TestSpans(t *testing.T) {
 
 	u.Is(-1, spans.NonHexIndex("0123456789abcdefABCDEF"), "valid hex")
 	u.Is(16, spans.NonHexIndex("0123456789abcdefghij"), "invalid hex")
-	for _, c := range ` !"#$%&'()*+,-./:;<=>?@`+
+	for _, c := range ` !"#$%&'()*+,-./:;<=>?@` +
 		"GHIJKLMNOPQRSTUVWXYZ[\\]^_`ghijklmnopqrstuvwxyz{|}~" {
 		u.Is(0, spans.NonHexIndex(string(c)), string(c)+" not hex")
 	}

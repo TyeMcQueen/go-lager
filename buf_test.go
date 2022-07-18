@@ -85,7 +85,7 @@ func TestEscape(t *testing.T) {
 	u.Is(`\u0001 \"«x9ABC»\" «»`, b.buf, `b:\x01 "\x9A\xBC" «»`)
 	b.buf = b.buf[0:0]
 
-	b.int(10,4)
+	b.int(10, 4)
 	u.Is("0010", b.buf, "int(10,4)")
 	b.buf = b.buf[0:0]
 
@@ -94,8 +94,8 @@ func TestEscape(t *testing.T) {
 	b.buf = b.buf[0:0]
 
 	b.w = io.Discard
-	b.buf = b.buf[0:16*1024-10]
-	b.scalar(1.0/3.0)
+	b.buf = b.buf[0 : 16*1024-10]
+	b.scalar(1.0 / 3.0)
 	u.Like(b.buf, "b.scalar() lock works", "^0[.]3+$")
 	b.unlock()
 

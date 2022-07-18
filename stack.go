@@ -21,7 +21,7 @@ func caller(depth, pathparts int) (string, int) {
 		parts := strings.Split(file, _pathSep)
 		if pathparts < len(parts) {
 			l := len(parts)
-			file = strings.Join(parts[l-pathparts : l], _pathSep)
+			file = strings.Join(parts[l-pathparts:l], _pathSep)
 		}
 	}
 	return file, line
