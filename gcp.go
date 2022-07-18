@@ -341,7 +341,7 @@ func GcpContextAddTrace(ctx Ctx, span spans.Factory) Ctx {
 // create either a new sub-span or (if there is no CloudTrace context in
 // the headers) a new trace (and span).  If the Factory is able to create
 // a new span, then it is marked as a "SERVER" span, its Display Name is
-// set to GetSpanPrefix() + " request in", and it is stored in the context
+// set to GetSpanPrefix() + ".in.request", and it is stored in the context
 // via spans.ContextStoreSpan().
 //
 // If a span was imported or created, then the span information is added
@@ -382,7 +382,7 @@ func GcpContextReceivedRequest(
 		span = span.ImportFromHeaders(req.Header)
 		if sub := span.NewSpan(); nil != sub {
 			span = sub
-			span.SetDisplayName(GetSpanPrefix() + " request in")
+			span.SetDisplayName(GetSpanPrefix() + ".in.request")
 			span.SetIsServer()
 			ctx = spans.ContextStoreSpan(ctx, span)
 		}
@@ -422,7 +422,7 @@ func GcpReceivedRequest(pReq **http.Request) spans.Factory {
 // The current span is fetched from 'ctx' [such as the one placed there
 // by GcpReceivedRequest() when the original request was received].  A new
 // sub-span is created, if possible.  If so, then it is marked as a "CLIENT"
-// span, its Display Name is set to GetSpanPrefix() + " request out", it is
+// span, its Display Name is set to GetSpanPrefix() + ".out.request", it is
 // stored in the Context via spans.ContextStoreSpan(), the returned Factory
 // will contain the new span, and the updated Context will contain 2 pairs
 // (to be logged) from the new span.  Note that the original Context is not
@@ -454,7 +454,7 @@ func GcpContextSendingRequest(
 		subspan := span.NewSpan()
 		if nil != subspan {
 			span = subspan
-			span.SetDisplayName(GetSpanPrefix() + " request out")
+			span.SetDisplayName(GetSpanPrefix() + ".out.request")
 			span.SetIsClient()
 			ctx = spans.ContextStoreSpan(ctx, span)
 			ctx = GcpContextAddTrace(ctx, span)

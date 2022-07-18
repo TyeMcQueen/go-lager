@@ -360,7 +360,9 @@ func firstInit() {
 
 	g.spanPrefix = os.Getenv("LAGER_SPAN_PREFIX")
 	if "" == g.spanPrefix {
-		g.spanPrefix = os.Args[0]
+		parts := strings.Split("/", os.Args[0])
+		parts = strings.Split("\\", parts[len(parts)-1])
+		g.spanPrefix = strings.Split(".", parts[len(parts)-1])[0]
 	}
 
 	// Update the g pointer in all loggers to the new globals:
@@ -783,7 +785,7 @@ func Keys(when, lev, msg, args, ctx, mod string) {
 
 // GetSpanPrefix() returns a string to be used as the prefix for the Display
 // Name of trace spans.  It defaults to os.Getenv("LAGER_SPAN_PREFIX") or,
-// if that is not set, to 'os.Args[0]'.
+// if that is not set, to the basename of 'os.Args[0]'.
 //
 func GetSpanPrefix() string {
 	return getGlobals().spanPrefix
