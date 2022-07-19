@@ -486,7 +486,9 @@ func GcpSendingNewRequest(
 		// ('span' will just get garbage collected and not registered.)
 		return nil, nil, err
 	}
-	span.SetHeader(req.Header)
+	if nil != span {
+		span.SetHeader(req.Header)
+	}
 	return req, span, nil
 }
 
@@ -510,7 +512,7 @@ func GcpSendingRequest(pReq **http.Request) spans.Factory {
 // http.Response and Finish()es the span (which registers it with GCP).
 //
 func GcpFinishSpan(span spans.Factory, resp *http.Response) time.Duration {
-	if span.GetStart().IsZero() {
+	if nil == span || span.GetStart().IsZero() {
 		return time.Duration(0)
 	}
 	span.SetStatusCode(int64(resp.StatusCode))
@@ -535,8 +537,12 @@ func GcpSendingResponse(
 	resp *http.Response,
 	pairs ...interface{},
 ) {
-	start := span.GetStart()
-	GcpLogAccess(req, resp, &start).MMap(
+	var pStart *time.Time
+	if nil != span {
+		start := span.GetStart()
+		pStart = &start
+	}
+	GcpLogAccess(req, resp, pStart).MMap(
 		"Sending response", InlinePairs, pairs)
 	GcpFinishSpan(span, resp)
 }
@@ -553,8 +559,12 @@ func GcpReceivedResponse(
 	resp *http.Response,
 	pairs ...interface{},
 ) {
-	start := span.GetStart()
-	GcpLogAccess(req, resp, &start).MMap(
+	var pStart *time.Time
+	if nil != span {
+		start := span.GetStart()
+		pStart = &start
+	}
+	GcpLogAccess(req, resp, pStart).MMap(
 		"Received response", InlinePairs, pairs)
 	GcpFinishSpan(span, resp)
 }
