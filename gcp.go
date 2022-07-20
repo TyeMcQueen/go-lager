@@ -161,18 +161,25 @@ func GcpFakeResponse(status int, size int64, desc string) *http.Response {
 
 // RequestUrl() returns a *url.URL more appropriate for logging, based on
 // an *http.Request.  For server Requests, the missing Host and Scheme are
-// populated.
+// populated.  Any query parameters are omitted (but the trailing "?" is
+// preserved, if present).
 //
 func RequestUrl(req *http.Request) *url.URL {
 	uri := *req.URL
+	if "" != uri.RawQuery {
+		uri.RawQuery = ""
+		uri.ForceQuery = true
+	}
 	if "" == uri.Host {
 		uri.Host = req.Host
 	}
-	uri.Scheme = "http"
-	if fp := req.Header.Get("X-Forwarded-Proto"); "" != fp {
-		uri.Scheme = fp
-	} else if nil != req.TLS {
-		uri.Scheme = "https"
+	if "" == uri.Scheme {
+		uri.Scheme = "http"
+		if fp := req.Header.Get("X-Forwarded-Proto"); "" != fp {
+			uri.Scheme = fp
+		} else if nil != req.TLS {
+			uri.Scheme = "https"
+		}
 	}
 	return &uri
 }
@@ -197,7 +204,7 @@ func RequestUrl(req *http.Request) *url.URL {
 // some can be omitted depending on what you pass in.
 //
 //      "requestMethod"     E.g. "GET"
-//      "requestUrl"        E.g. "https://cool.me/api/v1"
+//      "requestUrl"        E.g. "https://cool.me/api/v1" (no query params)
 //      "protocol"          E.g. "HTTP/1.1"
 //      "status"            E.g. 403
 //      "requestSize"       Omitted if the request body size is not yet known.
