@@ -442,7 +442,7 @@ func GcpReceivedRequest(pReq **http.Request) spans.Factory {
 // It is usually called in a manner similar to:
 //
 //      ctx, span := lager.GcpContextSendingRequest(req, ctx)
-//      defer span.FinishSpan(span)
+//      defer spans.FinishSpan(span)
 //
 // See also GcpSendingRequest().
 //
@@ -475,7 +475,7 @@ func GcpContextSendingRequest(
 //
 //      req, span, err := lager.GcpSendingNewRequest(ctx, "GET", url, nil)
 //      if nil != err { ... }
-//      defer span.FinishSpan(span)
+//      defer spans.FinishSpan(span)
 //
 func GcpSendingNewRequest(
 	ctx Ctx, method, url string, body io.Reader,

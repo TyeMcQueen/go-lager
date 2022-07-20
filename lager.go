@@ -20,7 +20,7 @@ type Ctx = context.Context
 // Global values that are accessed via an atomic.Value so they can be safely
 // initialized/updated even if somebody logs from an init() function.
 type globals struct {
-	// A Lager singleton for each log level (some will be noops).
+	// A Lager singleton for each log level (some will be no-ops).
 	lagers [int(nLevels)]Lager
 
 	// What key strings to use (if any).
