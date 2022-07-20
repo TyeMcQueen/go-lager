@@ -45,7 +45,7 @@ type ROSpan struct {
 // without depending on the GCP CloudTrace module (and its large list of
 // dependencies).
 //
-// Each factory instance can hold a single span or be empty.
+// Each Factory instance can hold a single span or be empty.
 //
 type Factory interface {
 
@@ -54,107 +54,107 @@ type Factory interface {
 	//
 	GetProjectID() string
 
-	// GetTraceID() returns "" if the factory is empty.  Otherwise it returns
+	// GetTraceID() returns "" if the Factory is empty.  Otherwise it returns
 	// the trace ID of the contained span (which will not be "" nor a
 	// hexadecimal representation of 0).
 	//
 	GetTraceID() string
 
-	// GetSpanID() returns 0 if the factory is empty.  Otherwise it returns
+	// GetSpanID() returns 0 if the Factory is empty.  Otherwise it returns
 	// the span ID of the contained span (which will not be 0).
 	//
 	GetSpanID() uint64
 
 	// GetStart() returns the time at which the span began.  Returns a zero
-	// time if the factory is empty or the contained span was Import()ed.
+	// time if the Factory is empty or the contained span was Import()ed.
 	//
 	GetStart() time.Time
 
-	// GetTracePath() returns "" if the factory is empty.  Otherwise it
+	// GetTracePath() returns "" if the Factory is empty.  Otherwise it
 	// returns the trace's resource sub-path which will be in the form
 	// "projects/{projectID}/traces/{traceID}".
 	//
 	GetTracePath() string
 
-	// GetSpanPath() returns "" if the factory is empty.  Otherwise it
+	// GetSpanPath() returns "" if the Factory is empty.  Otherwise it
 	// returns the span's resource sub-path which will be in the form
 	// "traces/{traceID}/spans/{spanID}" where both IDs are in hexadecimal.
 	//
 	GetSpanPath() string
 
-	// GetCloudContext() returns "" if the factory is empty.  Otherwise it
+	// GetCloudContext() returns "" if the Factory is empty.  Otherwise it
 	// returns a value appropriate for the "X-Cloud-Trace-Context:" header
 	// which will be in the form "{traceID}/{spanID}" where spanID is in
 	// base 10.
 	//
 	GetCloudContext() string
 
-	// Import() returns a new factory containing a span created somewhere
-	// else.  If the traceID or spanID is invalid, then a 'nil' factory and
+	// Import() returns a new Factory containing a span created somewhere
+	// else.  If the traceID or spanID is invalid, then a 'nil' Factory and
 	// an error are returned.  The usual reason to do this is so that you can
 	// then call NewSubSpan().
 	//
 	Import(traceID string, spanID uint64) (Factory, error)
 
-	// ImportFromHeaders() returns a new factory containing a span created
+	// ImportFromHeaders() returns a new Factory containing a span created
 	// somewhere else based on the "X-Cloud-Trace-Context:" header.  If the
 	// header does not contain a valid CloudContext value, then a valid but
-	// empty factory is returned.
+	// empty Factory is returned.
 	//
 	ImportFromHeaders(headers http.Header) Factory
 
-	// SetHeader() sets the "X-Cloud-Trace-Context:" header if the factory
+	// SetHeader() sets the "X-Cloud-Trace-Context:" header if the Factory
 	// is not empty.
 	//
 	SetHeader(headers http.Header)
 
-	// NewTrace() returns a new factory holding a new span, part of a new
-	// trace.  Any span held in the invoking factory is ignored.
+	// NewTrace() returns a new Factory holding a new span, part of a new
+	// trace.  Any span held in the invoking Factory is ignored.
 	//
 	NewTrace() Factory
 
-	// NewSubSpan() returns a new factory holding a new span that is a
-	// sub-span of the span contained in the invoking factory.  If the
-	// invoking factory was empty, then a failure with a stack trace is
-	// logged and a 'nil' factory is returned.
+	// NewSubSpan() returns a new Factory holding a new span that is a
+	// sub-span of the span contained in the invoking Factory.  If the
+	// invoking Factory was empty, then a failure with a stack trace is
+	// logged and a 'nil' Factory is returned.
 	//
 	NewSubSpan() Factory
 
-	// NewSpan() returns a new factory holding a new span.  It does
-	// NewTrace() if the factory was empty and NewSubSpan() otherwise.
+	// NewSpan() returns a new Factory holding a new span.  It does
+	// NewTrace() if the Factory was empty and NewSubSpan() otherwise.
 	//
 	NewSpan() Factory
 
 	// Sets the span kind to "SERVER".  Does nothing except log a failure
-	// with a stack trace if the factory is empty.
+	// with a stack trace if the Factory is empty.
 	//
 	SetIsServer()
 
 	// Sets the span kind to "CLIENT".  Does nothing except log a failure
-	// with a stack trace if the factory is empty.
+	// with a stack trace if the Factory is empty.
 	//
 	SetIsClient()
 
 	// Sets the span kind to "PRODUCER" (the term used for a process that
 	// asynchronously publishes data like with pub/sub).  Does nothing
-	// except log a failure with a stack trace if the factory is empty.
+	// except log a failure with a stack trace if the Factory is empty.
 	//
 	SetIsPublisher()
 
 	// Sets the span kind to "CONSUMER" (the term used for a process that
 	// asynchronously receives data like a pub/sub subscriber).  Does nothing
-	// except log a failure with a stack trace if the factory is empty.
+	// except log a failure with a stack trace if the Factory is empty.
 	//
 	SetIsSubscriber()
 
 	// SetDisplayName() sets the display name on the contained span.  Does
-	// nothing except log a failure with a stack trace if the factory is
+	// nothing except log a failure with a stack trace if the Factory is
 	// empty.
 	//
 	SetDisplayName(desc string)
 
 	// AddAttribute() adds an attribute key/value pair to the contained span.
-	// Does nothing except log a failure with a stack trace if the factory is
+	// Does nothing except log a failure with a stack trace if the Factory is
 	// empty (even returning a 'nil' error).
 	//
 	// 'val' can be a 'string', an 'int' or 'int64', or a 'bool'.  If 'key'
@@ -167,37 +167,42 @@ type Factory interface {
 	// 'code' is expected to be a value from
 	// google.golang.org/genproto/googleapis/rpc/code but this is not
 	// verified.  Does nothing except log a failure with a stack trace
-	// if the factory is empty.
+	// if the Factory is empty.
 	//
 	SetStatusCode(code int64)
 
 	// SetStatusMessage() sets the status message string on the contained
 	// span.  Does nothing except log a failure with a stack trace if the
-	// factory is empty.
+	// Factory is empty.
 	//
 	SetStatusMessage(msg string)
 
-	// Finish() notifies the factory that the contained span is finished.
-	// The factory will be empty afterward.  The factory will arrange for the
+	// Finish() notifies the Factory that the contained span is finished.
+	// The Factory will be empty afterward.  The Factory will arrange for the
 	// span to be registered.
 	//
-	// The returned value is the duration of the span's life.  If the factory
+	// The returned value is the duration of the span's life.  If the Factory
 	// was already empty or the contained span was from Import(), then a
 	// failure with a stack trace is logged and a 0 duration is returned.
 	//
 	Finish() time.Duration
 }
 
+// ContextStoreSpan() adds a span Factory to the passed-in Context,
+// returning the new, decorated Context.
+//
 func ContextStoreSpan(ctx context.Context, span Factory) context.Context {
 	return context.WithValue(ctx, _contextSpan, span)
 }
 
+// ContextGetSpan() extracts a span Factory from the passed-in Context and
+// returns it (or 'nil').
+//
 func ContextGetSpan(ctx context.Context) Factory {
-	span := ctx.Value(_contextSpan)
-	if nil == span {
-		return nil
+	if ix := ctx.Value(_contextSpan); nil != ix {
+		return ix.(Factory)
 	}
-	return span.(Factory)
+	return nil
 }
 
 // NonHexIndex() returns the offset to the first character in the string that
@@ -293,7 +298,7 @@ func (s ROSpan) GetCloudContext() string {
 	return s.traceID + "/" + strconv.FormatUint(s.spanID, 10)
 }
 
-// Import() returns a new factory containing a span created elsewhere.
+// Import() returns a new Factory containing a span created elsewhere.
 func (s ROSpan) Import(traceID string, spanID uint64) (Factory, error) {
 	if 0 == spanID {
 		return nil, fmt.Errorf("Import(): Span ID of 0 not allowed")
