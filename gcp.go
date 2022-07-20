@@ -359,7 +359,9 @@ func GcpContextAddTrace(ctx Ctx, span spans.Factory) Ctx {
 // the headers) a new trace (and span).  If the Factory is able to create
 // a new span, then it is marked as a "SERVER" span, its Display Name is
 // set to GetSpanPrefix() + ".in.request", and it is stored in the context
-// via spans.ContextStoreSpan().
+// via spans.ContextStoreSpan().  Also, an "http.url" attribute is set
+// to the request's URL (minus query parameters), and if the request method
+// is not "GET", then an "http.method" attribute is set to that.
 //
 // If a span was imported or created, then the span information is added
 // to the Context as pairs to be logged [see GcpContextAddTrace()] and
@@ -401,6 +403,10 @@ func GcpContextReceivedRequest(
 			span = sub
 			span.SetDisplayName(GetSpanPrefix() + ".in.request")
 			span.SetIsServer()
+			span.AddAttribute("http.url", RequestUrl(req).String())
+			if "" != req.Method && "GET" != req.Method {
+				span.AddAttribute("http.method", req.Method)
+			}
 			ctx = spans.ContextStoreSpan(ctx, span)
 		}
 		ctx = GcpContextAddTrace(ctx, span)
@@ -439,11 +445,12 @@ func GcpReceivedRequest(pReq **http.Request) spans.Factory {
 // The current span is fetched from 'ctx' [such as the one placed there
 // by GcpReceivedRequest() when the original request was received].  A new
 // sub-span is created, if possible.  If so, then it is marked as a "CLIENT"
-// span, its Display Name is set to GetSpanPrefix() + ".out.request", it is
-// stored in the Context via spans.ContextStoreSpan(), the returned Factory
-// will contain the new span, and the updated Context will contain 2 pairs
-// (to be logged) from the new span.  Note that the original Context is not
-// (cannot be) modified, so the trace/span pair logged after the
+// span, its Display Name is set to GetSpanPrefix() + ".out.request",
+// attributes for "http.url" and maybe "http.method" are added to it,
+// it is stored in the Context via spans.ContextStoreSpan(), the returned
+// Factory will contain the new span, and the updated Context will contain
+// 2 pairs (to be logged) from the new span.  Note that the original Context
+// is not (cannot be) modified, so the trace/span pair logged after the
 // request-sending function returns will revert to the prior span.
 //
 // If a span was found or created, then its CloudContext is added to the
@@ -473,6 +480,12 @@ func GcpContextSendingRequest(
 			span = subspan
 			span.SetDisplayName(GetSpanPrefix() + ".out.request")
 			span.SetIsClient()
+			if nil != req {
+				span.AddAttribute("http.url", RequestUrl(req).String())
+				if "" != req.Method && "GET" != req.Method {
+					span.AddAttribute("http.method", req.Method)
+				}
+			}
 			ctx = spans.ContextStoreSpan(ctx, span)
 			ctx = GcpContextAddTrace(ctx, span)
 		}
@@ -504,6 +517,10 @@ func GcpSendingNewRequest(
 		return nil, nil, err
 	}
 	if nil != span {
+		span.AddAttribute("http.url", RequestUrl(req).String())
+		if "" != req.Method && "GET" != req.Method {
+			span.AddAttribute("http.method", req.Method)
+		}
 		span.SetHeader(req.Header)
 	}
 	return req, span, nil
