@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"time"
 
@@ -158,6 +159,24 @@ func GcpFakeResponse(status int, size int64, desc string) *http.Response {
 	}
 }
 
+// RequestUrl() returns a *url.URL more appropriate for logging, based on
+// an *http.Request.  For server Requests, the missing Host and Scheme are
+// populated.
+//
+func RequestUrl(req *http.Request) *url.URL {
+	uri := *req.URL
+	if "" == uri.Host {
+		uri.Host = req.Host
+	}
+	uri.Scheme = "http"
+	if fp := req.Header.Get("X-Forwarded-Proto"); "" != fp {
+		uri.Scheme = fp
+	} else if nil != req.TLS {
+		uri.Scheme = "https"
+	}
+	return &uri
+}
+
 // GcpHtttp() returns a value for logging that GCP will recognize as details
 // about an HTTP(S) request (and perhaps its response), if placed under the
 // key "httpRequest".
@@ -227,16 +246,7 @@ func GcpHttp(req *http.Request, resp *http.Response, start *time.Time) RawMap {
 		lag = fmt.Sprintf("%.4fs", time.Now().Sub(*start).Seconds())
 	}
 
-	uri := *req.URL
-	if "" == uri.Host {
-		uri.Host = req.Host
-	}
-	uri.Scheme = "http"
-	if fp := req.Header.Get("X-Forwarded-Proto"); "" != fp {
-		uri.Scheme = fp
-	} else if nil != req.TLS {
-		uri.Scheme = "https"
-	}
+	uri := RequestUrl(req)
 
 	return Map(
 		"requestMethod", req.Method,
