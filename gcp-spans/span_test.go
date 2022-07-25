@@ -65,6 +65,7 @@ func TestSpans(t *testing.T) {
 	u.Is(empty, sp.NewSpan(), "NewSpan")
 	u.Is(nil, sp.NewSubSpan(), "NewSubSpan")
 	u.Is(nil, sp.AddAttribute("key", "value"), "AddAttribute")
+	u.Is(true, sp == sp.AddPairs("key", "value"), "AddPairs returns invocant")
 	u.Is(time.Duration(0), sp.Finish(), "Finish")
 
 	sp2, err := sp.Import(ti, 0)

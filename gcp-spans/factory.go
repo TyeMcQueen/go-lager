@@ -171,6 +171,13 @@ type Factory interface {
 	//
 	AddAttribute(key string, val interface{}) error
 
+	// AddPairs() takes a list of attribute key/value pairs.  For each pair,
+	// AddAttribute() is called and any returned error is logged (including
+	// a reference to the line of code that called AddPairs).  Always returns
+	// the calling Factory so further method calls can be chained.
+	//
+	AddPairs(pairs ...interface{}) Factory
+
 	// SetStatusCode() sets the status code on the contained span.
 	// 'code' is expected to be a value from
 	// google.golang.org/genproto/googleapis/rpc/code but this is not
@@ -368,6 +375,10 @@ func (s ROSpan) NewSpan() Factory {
 
 func (s ROSpan) AddAttribute(_ string, _ interface{}) error {
 	return nil
+}
+
+func (s ROSpan) AddPairs(_ ...interface{}) Factory {
+	return s
 }
 
 func (s ROSpan) Finish() time.Duration {
