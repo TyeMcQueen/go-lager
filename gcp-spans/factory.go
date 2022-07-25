@@ -104,9 +104,10 @@ type Factory interface {
 	ImportFromHeaders(headers http.Header) Factory
 
 	// SetHeader() sets the "X-Cloud-Trace-Context:" header if the Factory
-	// is not empty.
+	// is not empty.  Always returns the calling Factory so that further
+	// method calls can be chained.
 	//
-	SetHeader(headers http.Header)
+	SetHeader(headers http.Header) Factory
 
 	// NewTrace() returns a new Factory holding a new span, part of a new
 	// trace.  Any span held in the invoking Factory is ignored.
@@ -126,32 +127,39 @@ type Factory interface {
 	NewSpan() Factory
 
 	// Sets the span kind to "SERVER".  Does nothing except log a failure
-	// with a stack trace if the Factory is empty.
+	// with a stack trace if the Factory is empty.  Always returns the calling
+	// Factory so further method calls can be chained.
 	//
-	SetIsServer()
+	SetIsServer() Factory
 
 	// Sets the span kind to "CLIENT".  Does nothing except log a failure
-	// with a stack trace if the Factory is empty.
+	// with a stack trace if the Factory is empty.  Always returns the
+	// calling Factory so further method calls can be chained.
 	//
-	SetIsClient()
+	SetIsClient() Factory
 
 	// Sets the span kind to "PRODUCER" (the term used for a process that
 	// asynchronously publishes data like with pub/sub).  Does nothing
 	// except log a failure with a stack trace if the Factory is empty.
+	// Always returns the calling Factory so further method calls can be
+	// chained.
 	//
-	SetIsPublisher()
+	SetIsPublisher() Factory
 
 	// Sets the span kind to "CONSUMER" (the term used for a process that
 	// asynchronously receives data like a pub/sub subscriber).  Does nothing
 	// except log a failure with a stack trace if the Factory is empty.
+	// Always returns the calling Factory so further method calls can be
+	// chained.
 	//
-	SetIsSubscriber()
+	SetIsSubscriber() Factory
 
 	// SetDisplayName() sets the display name on the contained span.  Does
 	// nothing except log a failure with a stack trace if the Factory is
-	// empty.
+	// empty.  Always returns the calling Factory so further method calls
+	// can be chained.
 	//
-	SetDisplayName(desc string)
+	SetDisplayName(desc string) Factory
 
 	// AddAttribute() adds an attribute key/value pair to the contained span.
 	// Does nothing except log a failure with a stack trace if the Factory is
@@ -166,16 +174,20 @@ type Factory interface {
 	// SetStatusCode() sets the status code on the contained span.
 	// 'code' is expected to be a value from
 	// google.golang.org/genproto/googleapis/rpc/code but this is not
-	// verified.  Does nothing except log a failure with a stack trace
-	// if the Factory is empty.
+	// verified.  HTTP status codes are also understood by the library.
+	// Does nothing except log a failure with a stack trace if the Factory
+	// is empty.  Always returns the calling span so further method calls
+	// can be chained.
 	//
-	SetStatusCode(code int64)
+	SetStatusCode(code int64) Factory
 
 	// SetStatusMessage() sets the status message string on the contained
-	// span.  Does nothing except log a failure with a stack trace if the
-	// Factory is empty.
+	// span.  By convention, only a failure should set a status message.
+	// Does nothing except log a failure with a stack trace if the Factory
+	// is empty.  Always returns the calling Factory so further method calls
+	// can be chained.
 	//
-	SetStatusMessage(msg string)
+	SetStatusMessage(msg string) Factory
 
 	// Finish() notifies the Factory that the contained span is finished.
 	// The Factory will be empty afterward.  The Factory will arrange for the
@@ -327,19 +339,20 @@ func (s ROSpan) ImportFromHeaders(headers http.Header) Factory {
 	return ROSpan{proj: s.proj}
 }
 
-func (s ROSpan) SetHeader(headers http.Header) {
+func (s ROSpan) SetHeader(headers http.Header) Factory {
 	if 0 != s.spanID {
 		headers.Set(TraceHeader, s.GetCloudContext())
 	}
+	return s
 }
 
-func (s ROSpan) SetIsServer()              {}
-func (s ROSpan) SetIsClient()              {}
-func (s ROSpan) SetIsPublisher()           {}
-func (s ROSpan) SetIsSubscriber()          {}
-func (s ROSpan) SetDisplayName(_ string)   {}
-func (s ROSpan) SetStatusCode(_ int64)     {}
-func (s ROSpan) SetStatusMessage(_ string) {}
+func (s ROSpan) SetIsServer() Factory              { return s }
+func (s ROSpan) SetIsClient() Factory              { return s }
+func (s ROSpan) SetIsPublisher() Factory           { return s }
+func (s ROSpan) SetIsSubscriber() Factory          { return s }
+func (s ROSpan) SetDisplayName(_ string) Factory   { return s }
+func (s ROSpan) SetStatusCode(_ int64) Factory     { return s }
+func (s ROSpan) SetStatusMessage(_ string) Factory { return s }
 
 func (s ROSpan) NewTrace() Factory {
 	return ROSpan{proj: s.proj}
