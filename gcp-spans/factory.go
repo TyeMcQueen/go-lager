@@ -1,3 +1,7 @@
+/*
+	This package is still in beta and the public interface may undergo changes
+	without a full deprecation cycle.
+*/
 package spans
 
 import (
@@ -69,6 +73,12 @@ type Factory interface {
 	// time if the Factory is empty or the contained span was Import()ed.
 	//
 	GetStart() time.Time
+
+	// GetDuration() returns a negative duration if the factory is empty or
+	// if the span has not been Finish()ed yet.  Otherwise, it returns the
+	// span's duration.
+	//
+	GetDuration() time.Duration
 
 	// GetTracePath() returns "" if the Factory is empty.  Otherwise it
 	// returns the trace's resource sub-path which will be in the form
@@ -291,6 +301,10 @@ func (s ROSpan) GetSpanID() uint64 {
 
 func (s ROSpan) GetStart() time.Time {
 	return time.Time{}
+}
+
+func (s ROSpan) GetDuration() time.Duration {
+	return -time.Second
 }
 
 // GetTracePath() "projects/{projectID}/traces/{traceID}" or "".
