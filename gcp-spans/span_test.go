@@ -32,6 +32,7 @@ func TestSpans(t *testing.T) {
 	u.Is("", empty.GetTracePath(), "empty GetTracePath")
 	u.Is("", empty.GetSpanPath(), "empty GetSpanPath")
 	u.Is("", empty.GetCloudContext(), "empty GetCloudContext")
+	u.Is("-1s", empty.GetDuration(), "empty GetDuration")
 
 	fakeHeader := make(http.Header)
 	empty.SetHeader(fakeHeader)
