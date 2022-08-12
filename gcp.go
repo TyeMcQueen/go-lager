@@ -499,22 +499,25 @@ func GcpContextSendingRequest(
 // GcpSendingNewRequest() does several things that are useful when a
 // server is about to send a request to a dependent service, by calling
 // GcpContextSendingRequest().  It takes the same arguments as
-// http.NewRequestWithContext() but returns an extra value.
+// http.NewRequestWithContext() but returns extra values.
 //
 // It is usually called in a manner similar to:
 //
-//      req, span, err := lager.GcpSendingNewRequest(ctx, "GET", url, nil)
+//      req, ctx, span, err := lager.GcpSendingNewRequest(ctx, "GET", url, nil)
 //      if nil != err { ... }
 //      defer spans.FinishSpan(span)
 //
+// The returned Context is the same as 'req.Context()' but it is returned
+// separately to ease updating 'ctx' such as shown above.
+//
 func GcpSendingNewRequest(
 	ctx Ctx, method, url string, body io.Reader,
-) (*http.Request, spans.Factory, error) {
+) (*http.Request, Ctx, spans.Factory, error) {
 	ctx, span := GcpContextSendingRequest(nil, ctx)
 	req, err := http.NewRequestWithContext(ctx, method, url, body)
 	if nil != err {
 		// ('span' will just get garbage collected and not registered.)
-		return nil, nil, err
+		return nil, ctx, nil, err
 	}
 	if nil != span {
 		span.AddAttribute("http.url", RequestUrl(req).String())
@@ -523,7 +526,7 @@ func GcpSendingNewRequest(
 		}
 		span.SetHeader(req.Header)
 	}
-	return req, span, nil
+	return req, ctx, span, nil
 }
 
 // GcpSendingRequest() does several things that are useful when a
