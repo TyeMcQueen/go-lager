@@ -404,7 +404,7 @@ func GcpContextReceivedRequest(
 			span.SetDisplayName(GetSpanPrefix() + ".in.request")
 			span.SetIsServer()
 			span.AddAttribute("http.url", RequestUrl(req).String())
-			if "" != req.Method && "GET" != req.Method {
+			if "" != req.Method {
 				span.AddAttribute("http.method", req.Method)
 			}
 			ctx = spans.ContextStoreSpan(ctx, span)
