@@ -111,6 +111,9 @@ func AddPairs(ctx Ctx, pairs ...interface{}) Ctx {
 
 // Fetches the lager key/value pairs stored in a context.Context.
 func ContextPairs(ctx Ctx) AMap {
+	if nil == ctx {
+		return nil
+	}
 	x := ctx.Value(noop{})
 	switch v := x.(type) {
 	case nil:
