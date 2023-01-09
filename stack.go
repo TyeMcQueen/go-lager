@@ -9,13 +9,22 @@ import (
 
 var _pathSep = string(os.PathSeparator)
 
-func caller(depth, pathparts int) (string, int) {
-	_, file, line, ok := runtime.Caller(2 + depth)
-	if !ok {
-		return "", 0
+func caller(depth, pathparts int) (file string, line int, funcname string) {
+	pcs := make([]uintptr, 1)
+	if n := runtime.Callers(3+depth, pcs); n < 1 {
+		return
 	}
+	frame, _ := runtime.CallersFrames(pcs).Next()
+	if 0 == frame.PC {
+		return
+	}
+	file, line, funcname = frame.File, frame.Line, frame.Function
+
 	if -1 == pathparts {
 		pathparts = PathParts
+	}
+	if fnparts := strings.Split(funcname, "."); 0 < len(fnparts) {
+		funcname = fnparts[len(fnparts)-1]
 	}
 	if 0 < pathparts {
 		parts := strings.Split(file, _pathSep)
@@ -24,7 +33,7 @@ func caller(depth, pathparts int) (string, int) {
 			file = strings.Join(parts[l-pathparts:l], _pathSep)
 		}
 	}
-	return file, line
+	return file, line, funcname
 }
 
 // See the Lager interface for documentation.
@@ -33,12 +42,12 @@ func (l *logger) WithCaller(depth int, pathparts ...int) Lager {
 	if 0 < len(pathparts) {
 		parts = pathparts[0]
 	}
-	file, line := caller(depth, parts)
+	file, line, fn := caller(depth, parts)
 	if 0 == line {
 		return l
 	}
 	cp := *l
-	cp.kvp = cp.kvp.Merge(Pairs("_file", file, "_line", line))
+	cp.kvp = cp.kvp.Merge(Pairs("_file", file, "_line", line, "_func", fn))
 	return &cp
 }
 
@@ -53,11 +62,15 @@ func (l *logger) WithStack(minDepth, stackLen int, pathparts ...int) Lager {
 		if 0 < stackLen && stackLen <= depth-minDepth {
 			break
 		}
-		file, line := caller(depth, parts)
+		file, line, fn := caller(depth, parts)
 		if 0 == line {
 			break
 		}
-		stack = append(stack, fmt.Sprintf("%d %s", line, file))
+		if "" == fn {
+			stack = append(stack, fmt.Sprintf("%d %s", line, file))
+		} else {
+			stack = append(stack, fmt.Sprintf("%d %s %s", line, file, fn))
+		}
 	}
 	cp := *l
 	cp.kvp = cp.kvp.Merge(Pairs("_stack", stack))

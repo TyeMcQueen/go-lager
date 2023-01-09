@@ -148,7 +148,8 @@ type Lager interface {
 	// WithStack() adds a "_stack" key/value pair to the logged context.  The
 	// value is a list of strings where each string is a line number (base
 	// 10) followed by a space and then the code file name (shortened to the
-	// last 'PathParts' components).
+	// last 'PathParts' components) followed by a space and then the function
+	// name (with package prefix stripped).
 	//
 	// If 'stackLen' is 0 (or negative), then the full stack trace will be
 	// included.  Otherwise, the list will contain at most 'stackLen' strings.
@@ -164,9 +165,10 @@ type Lager interface {
 	//
 	WithStack(minDepth, stackLen int, pathParts ...int) Lager
 
-	// WithCaller() adds "_file" and "_line" key/value pairs to the logged
-	// context.  A 'depth' of 0 means the line where WithCaller() was called,
-	// and 1 is the line of the caller of the caller of WithCaller(), etc.
+	// WithCaller() adds "_file", "_line", and "_func" key/value pairs to the
+	// logged context.  A 'depth' of 0 means the line where WithCaller() was
+	// called, and 1 is the line of the caller of the caller of WithCaller(),
+	// etc.
 	//
 	// DEPRECATED: The 'pathParts' argument is deprecated and will be removed
 	// in the next feature release of Lager.  In this interim release, to make

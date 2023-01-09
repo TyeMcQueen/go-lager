@@ -117,7 +117,7 @@ func TestLager(t *testing.T) {
 		u.Is("10.0.1.2", hash["ip"], "log 3.ip")
 		u.Is("tye", hash["user"], "log 3.user")
 		u.Like(hash["_stack"], "log 3._stack",
-			`^\[[1-9][0-9]* [^/ ]+/[^/ ]+/lager_test[.]go\]$`)
+			`^\[[1-9][0-9]* [^/ ]+/[^/ ]+/lager_test[.]go TestLager\]$`)
 	}
 	log.Reset()
 
@@ -198,7 +198,7 @@ func TestData(t *testing.T) {
 	)
 	hash := make(map[string]interface{})
 	if validJson("log d1", log.Bytes(), &hash, u) {
-		u.Is(12, len(hash), "log d1 len")
+		u.Is(13, len(hash), "log d1 len")
 		u.Is("( \\ \b \f \r \000 \x7F\u0081 "+repl+"«x80BF» \uFB01 "+chess+" )",
 			hash["msg"], "log d1.m")
 		u.Like(log.Bytes(), "log d1",
@@ -216,6 +216,7 @@ func TestData(t *testing.T) {
 		u.HasType("map[string]interface {}", hash["json"], "log.d1.json")
 		u.Is("map[I:1 S:str]", hash["json"], "log.d1.json")
 		u.Is("lager_test.go", hash["_file"], "log.d1._file")
+		u.Is("TestData", hash["_func"], "log.d1._func")
 		u.Like(hash["_line"], "log.d1._line", "^[1-9][0-9]*$")
 		u.Is("value", hash["pair"], "log.d1.pair")
 		u.Is("second", hash["map"], "log.d1.map")
@@ -248,7 +249,7 @@ func TestData(t *testing.T) {
 	u.Is(false, ran, "func ran despite Unless")
 	hash = make(map[string]interface{})
 	if validJson("log d2", log.Bytes(), &hash, u) {
-		u.Is(7, len(hash), "log d2 len")
+		u.Is(8, len(hash), "log d2 len")
 		u.Is(nil, hash["not used"], "log d2[not used]")
 		u.Is("INFO", hash["l"], "log d2.l")
 		u.HasType("string", hash["ugh"], "log d2.ugh type")
@@ -277,7 +278,7 @@ func TestData(t *testing.T) {
 	)
 	hash = make(map[string]interface{})
 	if validJson("log d3", log.Bytes(), &hash, u) {
-		u.Is(5, len(hash), "log d3 len")
+		u.Is(6, len(hash), "log d3 len")
 		u.Is("TRACE", hash["l"], "log d3.l")
 		if u.HasType("[]interface {}", hash["data"], "log d3.data type") {
 			list := hash["data"].([]interface{})
@@ -530,7 +531,7 @@ func TestExit(t *testing.T) {
 
 	defer func() {
 		u.Like(log.Bytes(), "log exit", `"Exiting"`,
-			`"EXIT"`, `"_stack":\["[1-9][0-9]* lager_test.go", "`)
+			`"EXIT"`, `"_stack":\["[1-9][0-9]* lager_test.go TestExit", "`)
 		log.Reset()
 	}()
 
