@@ -43,6 +43,10 @@ func TestLager(t *testing.T) {
 	log := bytes.NewBuffer(nil)
 	defer lager.SetOutput(log)()
 
+	u.Is("go-lager.test", lager.GetSpanPrefix(), "default span prefix")
+	lager.SetSpanPrefix("lager-test")
+	u.Is("lager-test", lager.GetSpanPrefix(), "updated span prefix")
+
 	ll := lager.Info()
 	u.Is(false, ll.Enabled(), "not enabled")
 	ll.List("Not output")
@@ -127,35 +131,43 @@ func TestLager(t *testing.T) {
 	mod := lager.NewModule(`mod"test"`)
 	mod.Fail(ctx).List("From a module")
 	u.Is(true, lager.SetModuleLevels(`mod"test"`, "FW"), "set mod lev")
-	if validJson("log 4", log.Bytes(), &list, u) {
-		u.Is(5, len(list), "log 4 len")
-	/*  u.Like(list[0], "log 4.0",
+	if validJson("mod 1", log.Bytes(), &list, u) {
+		u.Is(5, len(list), "mod 1 len")
+	/*  u.Like(list[0], "mod 1.0",
 			"^[0-9]{4}-[0-1][0-9]-[0-3][0-9] ",
 			" [012][0-9]:[0-5][0-9]:[0-5][0-9][.][0-9]+Z$")
-		u.Is("WARN", list[1], "log 4.1")
+		u.Is("WARN", list[1], "mod 1.1")
 		h, ok := list[2].(map[string]interface{})
-		if !u.Is(true, ok, "log 4.2 is hash") {
-			u.Log("log 4.2 type", fmt.Sprintf("%T", list[2]))
+		if !u.Is(true, ok, "mod 1.2 is hash") {
+			u.Log("mod 1.2 type", fmt.Sprintf("%T", list[2]))
 		} else {
-			u.Is(2, len(h), "log 4.2 len")
+			u.Is(2, len(h), "mod 1.2 len")
 			_, ok = h["Output?"].(bool)
-			u.Is("true", h["Output?"], "log 4.2")
-			u.Is(true, ok, "log 4.2 is bool")
+			u.Is("true", h["Output?"], "mod 1.2")
+			u.Is(true, ok, "mod 1.2 is bool")
 			ix, ok := h["1.45"]
-			u.Is("<nil>", ix, "log 4.2.'1.45'")
-			u.Is(true, ok, "log 4.2.'1.45' exists")
+			u.Is("<nil>", ix, "mod 1.2.'1.45'")
+			u.Is(true, ok, "mod 1.2.'1.45' exists")
 		}
 		h, ok = list[3].(map[string]interface{})
-		if !u.Is(true, ok, "log 4.3 is list") {
-			u.Log("log 4.2 type", fmt.Sprintf("%T", list[3]))
-			u.Log("log 4.2 value", list[3])
+		if !u.Is(true, ok, "mod 1.3 is list") {
+			u.Log("mod 1.2 type", fmt.Sprintf("%T", list[3]))
+			u.Log("mod 1.2 value", list[3])
 		} else {
-			u.Is(2, len(h), "log 4.3 len")
-			u.Is("10.1.2.3", h["ip"], "log 4.3.ip")
-			u.Is("tye", h["user"], "log 4.3.user")
+			u.Is(2, len(h), "mod 1.3 len")
+			u.Is("10.1.2.3", h["ip"], "mod 1.3.ip")
+			u.Is("tye", h["user"], "mod 1.3.user")
 		} */
 	}
 	log.Reset()
+
+	lager.Keys("t", "l", "", "data", "", "mod")
+	mod.Fail(ctx).List("From a module")
+	if validJson("mod 2", log.Bytes(), &hash, u) {
+		u.Is(`mod"test"`, hash["mod"], "mod 2.mod")
+	}
+
+	lager.Keys("", "", "", "", "", "")
 }
 
 func TestData(t *testing.T) {
@@ -164,6 +176,8 @@ func TestData(t *testing.T) {
 	defer lager.SetOutput(log)()
 	lager.Init("FAWN BIT A DOG")
 	defer lager.Init("FWNA")
+
+	u.Is(nil, lager.ContextPairs(nil), "ContextPairs(nil)") // 100% coverage
 
 	lager.Keys("t", "l", "", "data", "", "mod")
 
