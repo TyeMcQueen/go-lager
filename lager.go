@@ -362,9 +362,9 @@ func firstInit() {
 
 	g.spanPrefix = os.Getenv("LAGER_SPAN_PREFIX")
 	if "" == g.spanPrefix {
-		parts := strings.Split("/", os.Args[0])
-		parts = strings.Split("\\", parts[len(parts)-1])
-		g.spanPrefix = strings.Split(".", parts[len(parts)-1])[0]
+		parts := strings.Split(os.Args[0], "/")
+		parts = strings.Split(parts[len(parts)-1], "\\")
+		g.spanPrefix = parts[len(parts)-1]
 	}
 
 	// Update the g pointer in all loggers to the new globals:
