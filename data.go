@@ -40,6 +40,30 @@ type RawMap []interface{}
 // A processed list of key/value pairs we can efficiently convert to JSON.
 type AMap = *KVPairs
 
+// Flusher is an io.Writer that will use a Lager to log each buffer written
+// to it.  Filters are called in order.  See lager.Lager.LogLogger() for
+// more details.
+//
+type Flusher struct {
+	Lager   *logger
+	Filters []func(Lager, []byte) []byte
+}
+
+func (f Flusher) Write(buf []byte) (int, error) {
+	olen := len(buf)
+	for _, ff := range f.Filters {
+		buf = ff(f.Lager, buf)
+	}
+	l := len(buf)
+	if 0 < l && '\n' == buf[l-1] {
+		buf = buf[:l-1] // Strip trailing newline
+	}
+	if 0 < len(buf) {
+		f.Lager.List(buf)
+	}
+	return olen, nil
+}
+
 // S() converts an arbitrary value to a string.  It is very similar to
 // 'fmt.Sprintf("%v", arg)' but treats []byte values the same as strings
 // rather then dumping them as a list of byte values in base 10.

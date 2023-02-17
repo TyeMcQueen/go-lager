@@ -50,6 +50,7 @@ func TestLager(t *testing.T) {
 	ll := lager.Info()
 	u.Is(false, ll.Enabled(), "not enabled")
 	ll.List("Not output")
+	ll.LogLogger().Println("No logger output")
 	u.Is(0, log.Len(), "Info not logged")
 	log.Reset()
 
@@ -126,6 +127,15 @@ func TestLager(t *testing.T) {
 	log.Reset()
 
 	lager.Keys("", "", "", "", "", "")
+
+	logger := lager.Warn().LogLogger(func(_ lager.Lager, m []byte) []byte {
+		return m
+	})
+	logger.Printf("failed: %v", io.EOF)
+	if validJson("logger", log.Bytes(), &list, u) {
+		u.Is("failed: EOF", list[2], "logger.2")
+	}
+	log.Reset()
 
 	// TODO
 	mod := lager.NewModule(`mod"test"`)

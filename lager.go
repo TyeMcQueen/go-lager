@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"strings"
 	"sync"
@@ -182,6 +183,15 @@ type Lager interface {
 	// It is just an alias for the List() method.
 	//
 	Println(...interface{})
+
+	// LogLogger() returns a *log.Logger that uses the receiver to log
+	// the constructed message.  You can pass 0 or more message filter
+	// functions to modify the message before logging or to perform
+	// additional actions.  If the final filter returns an empty []byte
+	// value, then nothing will be logged.  A Flusher object is used as
+	// the io.Writer for the created log.Logger.
+	//
+	LogLogger(...func(Lager, []byte) []byte) *log.Logger
 }
 
 // The keys to use when writing logs as a JSON map not a list.
@@ -206,6 +216,10 @@ func (n noop) WithStack(_, _ int, _ ...int) Lager { return n }
 func (n noop) WithCaller(_ int, _ ...int) Lager   { return n }
 func (_ noop) Enabled() bool                      { return false }
 func (_ noop) Println(_ ...interface{})           {}
+
+func (_ noop) LogLogger(_ ...func(Lager, []byte) []byte) *log.Logger {
+	return log.New(io.Discard, "", 0)
+}
 
 // The type for internal log levels.
 type level int8
@@ -897,6 +911,11 @@ func (l *logger) end(b *buffer) {
 
 // See the Lager interface for documentation.
 func (l *logger) Println(args ...interface{}) { l.List(args...) }
+
+// See the Lager interface for documentation.
+func (l *logger) LogLogger(filters ...func(Lager, []byte) []byte) *log.Logger {
+	return log.New(Flusher{l, filters}, "", 0)
+}
 
 // See the Lager interface for documentation.
 func (l *logger) List(args ...interface{}) {
