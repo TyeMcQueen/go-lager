@@ -34,7 +34,7 @@ help:
 MOD := github.com/TyeMcQueen/go-lager/
 
 cover: go.mod *.go */*.go
-	go test -coverprofile cover ./...
+	go test -race -coverprofile cover ./...
 
 cover.html: cover
 	go tool cover -html cover -o cover.html
