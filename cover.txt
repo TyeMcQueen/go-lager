@@ -6,6 +6,6 @@
  61.9%  grpc_lager/options.go
  91.7%  grpc_lager/payload_interceptors.go
 100.0%  grpc_lager/server_interceptors.go
- 99.1%  lager.go
+ 99.2%  lager.go
  48.9%  module.go
- 95.7%  stack.go
+ 94.7%  stack.go

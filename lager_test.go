@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"math"
 	"net/url"
@@ -17,6 +18,16 @@ import (
 )
 
 var _ = os.Stdout
+
+func TestMain(m *testing.M) {
+	go tutl.ShowStackOnInterrupt()
+	exit := m.Run()
+
+	// One extra line of coverage:
+	defer lager.ExitViaPanic()(func(x *int) { *x = exit })
+	lager.SetOutput(io.Discard)
+	lager.Exit().List("Done.")
+}
 
 func validJson(what string, b []byte, pDest interface{}, u tutl.TUTL) bool {
 	u.Helper()
