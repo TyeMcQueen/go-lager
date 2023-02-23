@@ -31,9 +31,14 @@ type globals struct {
 	// The currently enabled log levels (used in module.go).
 	enabled string
 
-	// TODO: dest io.Writer
-	// TODO: pathParts int
-	// TODO: levDesc func(string) string
+	// Optional alternate destination for logs.
+	dest io.Writer
+
+	// How much of source code file path to include in caller info.
+	pathParts int
+
+	// Required function to transform log level name before logging it.
+	levDesc func(string) string
 
 	// Add '"json": 1' when jsonPayload.text would become textPayload?
 	inGcp bool
@@ -253,32 +258,6 @@ var _firstInit sync.Once
 // Lock held when _globals is being updated.
 var _globalsMutex sync.Mutex
 
-// DEPRECATED: The next feature release of Lager will require the use of
-// lager.SetOutput() rather than modifying a global lager.OutputDest.
-//
-// Set OutputDest to a non-nil io.Writer to not write logs to os.Stdout and
-// os.Stderr.
-//
-var OutputDest io.Writer
-
-// DEPRECATED: The next feature release of Lager will require the use of
-// lager.SetPathParts() rather than modifying a global lager.PathParts.
-// It will also change the default value to 3.
-//
-// 'PathParts' to use when -1 is passed to WithCaller() or WithStack().
-//
-var PathParts = 0
-
-// DEPRECATED: The next feature release of Lager will require the use of
-// lager.SetLevelNotation() over modifying a global lager.LevelNotation.
-//
-// LevelNotation takes a log level name (like "DEBUG") and returns how that
-// level should be shown in the log.  This defaults to not changing the
-// level name.  If the environment variable LAGER_GCP is non-empty, then
-// it instead defaults to using GcpLevelName().
-//
-var LevelNotation = identLevelNotation
-
 // The special value passed to panic() [see ExitViaPanic()].
 var _panicToExit = fakePanic("panic() from lager.Exit()")
 
@@ -360,7 +339,10 @@ func updateGlobals(updater func(*globals)) {
 // code.
 //
 func firstInit() {
-	g := globals{}
+	g := globals{
+		pathParts: 3,
+		levDesc:   identLevelNotation,
+	}
 	g.lagers[int(lPanic)] = &logger{lev: lPanic}
 	g.lagers[int(lExit)] = &logger{lev: lExit}
 	setLevels(os.Getenv("LAGER_LEVELS"))(&g)
@@ -474,11 +456,15 @@ func setLevels(levels string) func(*globals) {
 //      //                           ^^ Note required final parens!
 //
 func SetOutput(writer io.Writer) func() {
-	prior := OutputDest
-	// TODO: write safe version
-	OutputDest = writer
+	var prior io.Writer
+	updateGlobals(func(g *globals) {
+		prior = g.dest
+		g.dest = writer
+	})
 	return func() {
-		OutputDest = prior
+		updateGlobals(func(g *globals) {
+			g.dest = prior
+		})
 	}
 }
 
@@ -489,11 +475,12 @@ func SetOutput(writer io.Writer) func() {
 // A 3 adds the directory above that, etc.  A value of 0 (or -1) will include
 // the full path.
 //
-// In the next feature release of Lager, PathParts will default to 3.
+// If you have not called SetPathParts(), it defaults to 3.
 //
 func SetPathParts(pathParts int) {
-	// TODO: write safe version
-	PathParts = pathParts
+	updateGlobals(func(g *globals) {
+		g.pathParts = pathParts
+	})
 }
 
 // SetLevelNotation() installs a function to map from Lager's level names
@@ -507,7 +494,9 @@ func SetLevelNotation(mapper func(string) string) {
 	if nil == mapper {
 		mapper = identLevelNotation
 	}
-	LevelNotation = mapper
+	updateGlobals(func(g *globals) {
+		g.levDesc = mapper
+	})
 }
 
 func identLevelNotation(lev string) string { return lev }
@@ -833,8 +822,8 @@ func (l *logger) start() *buffer {
 	default:
 		b.w = os.Stdout
 	}
-	if nil != OutputDest {
-		b.w = OutputDest
+	if nil != b.g.dest {
+		b.w = b.g.dest
 	}
 
 	if nil == l.g.keys {
@@ -850,7 +839,7 @@ func (l *logger) start() *buffer {
 		b.quote(l.g.keys.lev)
 		b.colon()
 	}
-	b.scalar(LevelNotation(l.lev.String()))
+	b.scalar(b.g.levDesc(l.lev.String()))
 
 	return b
 }

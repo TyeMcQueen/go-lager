@@ -20,9 +20,6 @@ func caller(depth, pathparts int) (file string, line int, funcname string) {
 	}
 	file, line, funcname = frame.File, frame.Line, frame.Function
 
-	if -1 == pathparts {
-		pathparts = PathParts
-	}
 	if fnparts := strings.Split(funcname, "."); 0 < len(fnparts) {
 		funcname = fnparts[len(fnparts)-1]
 	}
@@ -38,7 +35,7 @@ func caller(depth, pathparts int) (file string, line int, funcname string) {
 
 // See the Lager interface for documentation.
 func (l *logger) WithCaller(depth int) Lager {
-	file, line, fn := caller(depth, -1)
+	file, line, fn := caller(depth, l.g.pathParts)
 	if 0 == line {
 		return l
 	}
@@ -54,7 +51,7 @@ func (l *logger) WithStack(minDepth, stackLen int) Lager {
 		if 0 < stackLen && stackLen <= depth-minDepth {
 			break
 		}
-		file, line, fn := caller(depth, -1)
+		file, line, fn := caller(depth, l.g.pathParts)
 		if 0 == line {
 			break
 		}

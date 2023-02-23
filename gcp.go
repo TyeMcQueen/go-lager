@@ -94,11 +94,9 @@ func setRunningInGcp(enabled bool) func(*globals) {
 					args: "data", mod: "module", ctx: "",
 				}
 			}
-			// TODO: g.levDesc = GcpLevelName
-			SetLevelNotation(GcpLevelName)
+			g.levDesc = GcpLevelName
 		} else {
-			// TODO: g.levDesc = identLevelNotation
-			SetLevelNotation(nil)
+			g.levDesc = identLevelNotation
 		}
 	}
 }
