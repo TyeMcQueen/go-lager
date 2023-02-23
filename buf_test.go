@@ -110,7 +110,6 @@ func TestEscape(t *testing.T) {
 func TestInit(t *testing.T) {
 	u := tutl.New(t)
 	log := bytes.NewBuffer(nil)
-	defer SetOutput(log)()
 
 	defer Keys("", "", "", "", "", "")
 	defer os.Unsetenv("LAGER_LEVELS")
@@ -120,6 +119,8 @@ func TestInit(t *testing.T) {
 	os.Setenv("LAGER_KEYS", "time,sev,msg,data,,mod")
 	os.Setenv("LAGER_GCP", "1")
 	firstInit()
+	defer SetOutput(log)()
+
 	g := getGlobals()
 	u.Is("FWNATO", g.enabled, "enabled levels")
 	u.Is("time", g.keys.when, "when key")

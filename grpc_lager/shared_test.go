@@ -57,7 +57,7 @@ func newBaseSuite(t *testing.T, levels string) *baseSuite {
 	b := &bytes.Buffer{}
 	muB := grpc_testing.NewMutexReadWriter(b)
 	lager.Init(levels)
-	lager.OutputDest = muB
+	lager.SetOutput(muB)
 
 	return &baseSuite{
 		buffer:      b,
