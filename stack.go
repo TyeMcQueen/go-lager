@@ -37,12 +37,8 @@ func caller(depth, pathparts int) (file string, line int, funcname string) {
 }
 
 // See the Lager interface for documentation.
-func (l *logger) WithCaller(depth int, pathparts ...int) Lager {
-	parts := -1
-	if 0 < len(pathparts) {
-		parts = pathparts[0]
-	}
-	file, line, fn := caller(depth, parts)
+func (l *logger) WithCaller(depth int) Lager {
+	file, line, fn := caller(depth, -1)
 	if 0 == line {
 		return l
 	}
@@ -52,17 +48,13 @@ func (l *logger) WithCaller(depth int, pathparts ...int) Lager {
 }
 
 // See the Lager interface for documentation.
-func (l *logger) WithStack(minDepth, stackLen int, pathparts ...int) Lager {
-	parts := -1
-	if 0 < len(pathparts) {
-		parts = pathparts[0]
-	}
+func (l *logger) WithStack(minDepth, stackLen int) Lager {
 	stack := make([]string, 0)
 	for depth := minDepth; true; depth++ {
 		if 0 < stackLen && stackLen <= depth-minDepth {
 			break
 		}
-		file, line, fn := caller(depth, parts)
+		file, line, fn := caller(depth, -1)
 		if 0 == line {
 			break
 		}

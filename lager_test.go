@@ -537,9 +537,6 @@ func TestFormat(t *testing.T) {
 	u.Like(log.Bytes(), "gcp mmap",
 		`*"message":"str", "json":1}`)
 	log.Reset()
-
-	// Get 100% coverage until next release:
-	ll.WithCaller(1, 1).WithStack(1, 1, 1)
 }
 
 func TestExit(t *testing.T) {

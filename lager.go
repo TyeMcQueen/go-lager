@@ -160,24 +160,14 @@ type Lager interface {
 	// A 'minDepth' of 0 starts at the line where WithStack() was called and
 	// 1 starts at the line of the caller of the caller of WithStack(), etc.
 	//
-	// DEPRECATED: The 'pathParts' argument is deprecated and will be removed
-	// in the next feature release of Lager.  In this interim release, to make
-	// 'pathParts' optional, you can pass more than one value for it but only
-	// the first one matters.
-	//
-	WithStack(minDepth, stackLen int, pathParts ...int) Lager
+	WithStack(minDepth, stackLen int) Lager
 
 	// WithCaller() adds "_file", "_line", and "_func" key/value pairs to the
 	// logged context.  A 'depth' of 0 means the line where WithCaller() was
 	// called, and 1 is the line of the caller of the caller of WithCaller(),
 	// etc.
 	//
-	// DEPRECATED: The 'pathParts' argument is deprecated and will be removed
-	// in the next feature release of Lager.  In this interim release, to make
-	// 'pathParts' optional, you can pass more than one value for it but only
-	// the first one matters.
-	//
-	WithCaller(depth int, pathParts ...int) Lager
+	WithCaller(depth int) Lager
 
 	// The Println() method is provided for minimal compatibility with
 	// log.Logger, as this method is the one most used by other modules.
@@ -213,8 +203,8 @@ func (_ noop) CMap(_ ...interface{})              {}
 func (_ noop) MMap(_ string, _ ...interface{})    {}
 func (_ noop) CMMap(_ string, _ ...interface{})   {}
 func (n noop) With(_ ...Ctx) Lager                { return n }
-func (n noop) WithStack(_, _ int, _ ...int) Lager { return n }
-func (n noop) WithCaller(_ int, _ ...int) Lager   { return n }
+func (n noop) WithStack(_, _ int) Lager           { return n }
+func (n noop) WithCaller(_ int) Lager             { return n }
 func (_ noop) Enabled() bool                      { return false }
 func (_ noop) Println(_ ...interface{})           {}
 
