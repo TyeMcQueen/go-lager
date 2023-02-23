@@ -34,6 +34,8 @@ type AsyncBuffer struct {
 	buf bytes.Buffer
 }
 
+/// AsyncBuffer ///
+
 func (ab *AsyncBuffer) lock() func() {
 	ab.mu.Lock()
 	return ab.mu.Unlock
@@ -101,6 +103,7 @@ func (ab *AsyncBuffer) ReadBytes(delim byte) ([]byte, error) {
 	return ab.buf.ReadBytes(delim)
 }
 
+/// AsyncBuilder ///
 
 func (sb *AsyncBuilder) lock() func() {
 	sb.mu.Lock()

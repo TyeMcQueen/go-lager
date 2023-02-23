@@ -33,9 +33,7 @@ Google Cloud Platform (GCP), it could instead output:
 (as a single line) which GCP understands well.  Note that it is still
 easy for a human to read with the consistent order used.
 
-Lager is about as efficient as https://github.com/uber-go/zap or
-https://github.com/rs/zerolog in CPU usage and lack of allocations per log
-line.  But this efficiency was not allowed to make it inconvenient to write
+Lager is efficient but not to the point of making it inconvenient to write
 code that uses Lager.
 
 It also provides more granularity when controlling which log lines to write

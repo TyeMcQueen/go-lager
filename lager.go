@@ -14,12 +14,13 @@ import (
 
 /// TYPES ///
 
-// Just an alias for context.Context that takes up less space in function
-// signatures.  You never need to use lager.Ctx in your code.
+// Ctx is just an alias for context.Context that takes up less space in
+// function signatures.  You never need to use lager.Ctx in your code.
 type Ctx = context.Context
 
 // Global values that are accessed via an atomic.Value so they can be safely
 // initialized/updated even if somebody logs from an init() function.
+//
 type globals struct {
 	// A Lager singleton for each log level (some will be no-ops).
 	lagers [int(nLevels)]Lager
@@ -832,7 +833,7 @@ func (l *logger) With(ctxs ...Ctx) Lager {
 	return &cp
 }
 
-// Common opening steps for both List() and Map() methods.
+// Opening steps when actually logging a line.
 func (l *logger) start() *buffer {
 	b := bufPool.Get().(*buffer)
 	b.g = l.g
@@ -864,7 +865,7 @@ func (l *logger) start() *buffer {
 	return b
 }
 
-// Common closing steps for both List() and Map() methods.
+// Closing steps when actually logging a line.
 func (l *logger) end(b *buffer) {
 	if lExit == l.lev && 0 != atomic.LoadInt32(&_stackWithExit) {
 		// 0: skip end(), 1: skip MMap() etc, 2: get caller of MMap() etc:
