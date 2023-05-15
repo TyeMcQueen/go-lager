@@ -10,7 +10,7 @@ Usage example:
 ```go
 import (
     "github.com/grpc-ecosystem/go-grpc-middleware"
-    "github.com/TyeMcQueen/go-lager/grpc_lager"
+    "github.com/Unity-Technologies/go-lager-internal/grpc_lager"
 )
 
 myServer := grpc.NewServer(

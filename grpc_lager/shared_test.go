@@ -11,12 +11,12 @@ import (
 	"io"
 	"testing"
 
-	"github.com/TyeMcQueen/go-lager"
-	grpc_lager "github.com/TyeMcQueen/go-lager/grpc_lager"
+	"github.com/Unity-Technologies/go-lager-internal"
+	grpc_lager "github.com/Unity-Technologies/go-lager-internal/grpc_lager"
 	"google.golang.org/grpc/codes"
 
-	grpc_lager_testing "github.com/TyeMcQueen/go-lager/grpc_lager/testing"
-	pb_testproto "github.com/TyeMcQueen/go-lager/grpc_lager/testproto"
+	grpc_lager_testing "github.com/Unity-Technologies/go-lager-internal/grpc_lager/testing"
+	pb_testproto "github.com/Unity-Technologies/go-lager-internal/grpc_lager/testproto"
 	grpc_ctxtags "github.com/grpc-ecosystem/go-grpc-middleware/tags"
 	grpc_testing "github.com/grpc-ecosystem/go-grpc-middleware/testing"
 )

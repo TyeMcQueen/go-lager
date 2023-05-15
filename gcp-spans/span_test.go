@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/TyeMcQueen/go-lager/gcp-spans"
+	"github.com/Unity-Technologies/go-lager-internal/gcp-spans"
 	"github.com/Unity-Technologies/go-tutl-internal"
 )
 

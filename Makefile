@@ -31,7 +31,7 @@ help:
 	{ lastLine = $$0 }' $(MAKEFILE_LIST) \
 		| sed -e '/[^ ]$$/s/   / . /g' -e 's/ $$//'
 
-MOD := github.com/TyeMcQueen/go-lager/
+MOD := github.com/Unity-Technologies/go-lager-internal/
 
 cover: go.mod *.go */*.go
 	go test -race -coverprofile cover ./...

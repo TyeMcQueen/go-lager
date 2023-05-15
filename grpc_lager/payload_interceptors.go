@@ -3,7 +3,7 @@ package grpc_lager
 import (
 	"context"
 
-	"github.com/TyeMcQueen/go-lager"
+	"github.com/Unity-Technologies/go-lager-internal"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"

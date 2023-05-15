@@ -8,7 +8,7 @@ import (
 	"context"
 	"testing"
 
-	pb_testproto "github.com/TyeMcQueen/go-lager/grpc_lager/testproto"
+	pb_testproto "github.com/Unity-Technologies/go-lager-internal/grpc_lager/testproto"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )

@@ -48,8 +48,8 @@ If you use a fork of this repository and want to have changes you make
 accepted upstream, you should use the fork by adding (to go.mod in modules
 where you use the fork) a line like:
 
-    replace github.com/TyeMcQueen/go-lager => github.com/your/lager v1.2.3
+    replace github.com/Unity-Technologies/go-lager-internal => github.com/your/lager v1.2.3
 
-And then use "github.com/TyeMcQueen/go-lager" in 'import' statements and
+And then use "github.com/Unity-Technologies/go-lager-internal" in 'import' statements and
 in a 'require' directive in the go.mod.  (See "replace directive" in
 https://go.dev/ref/mod.)

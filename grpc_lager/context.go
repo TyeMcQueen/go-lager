@@ -3,7 +3,7 @@ package grpc_lager
 import (
 	"context"
 
-	"github.com/TyeMcQueen/go-lager"
+	"github.com/Unity-Technologies/go-lager-internal"
 	grpc_ctxtags "github.com/grpc-ecosystem/go-grpc-middleware/tags"
 )
 

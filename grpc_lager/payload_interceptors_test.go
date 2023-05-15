@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	grpc_lager "github.com/TyeMcQueen/go-lager/grpc_lager"
-	pb_testproto "github.com/TyeMcQueen/go-lager/grpc_lager/testproto"
+	grpc_lager "github.com/Unity-Technologies/go-lager-internal/grpc_lager"
+	pb_testproto "github.com/Unity-Technologies/go-lager-internal/grpc_lager/testproto"
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_ctxtags "github.com/grpc-ecosystem/go-grpc-middleware/tags"
 	"github.com/stretchr/testify/assert"

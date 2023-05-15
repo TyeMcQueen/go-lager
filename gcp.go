@@ -11,7 +11,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/TyeMcQueen/go-lager/gcp-spans"
+	"github.com/Unity-Technologies/go-lager-internal/gcp-spans"
 )
 
 const GcpSpanKey = "logging.googleapis.com/spanId"

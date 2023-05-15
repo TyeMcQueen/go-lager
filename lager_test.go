@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/TyeMcQueen/go-lager"
+	"github.com/Unity-Technologies/go-lager-internal"
 	"github.com/Unity-Technologies/go-tutl-internal"
 )
 
@@ -48,7 +48,7 @@ func TestLager(t *testing.T) {
 	ctx := context.Background()
 	ctx2 := lager.AddPairs(ctx, "ip", "10.1.2.3")
 	ctx = lager.AddPairs(ctx, "ip", "10.0.1.2")
-	ctx = lager.AddPairs(ctx, "user", lager.S("tye"))
+	ctx = lager.AddPairs(ctx, "user", lager.S("not_a_user"))
 	u.Is(lager.ContextPairs(ctx), lager.ContextPairs(lager.AddPairs(ctx)),
 		"lager.AddPairs(ctx) is no-op")
 	log := bytes.NewBuffer(nil)
@@ -91,7 +91,7 @@ func TestLager(t *testing.T) {
 			h := list[3].(map[string]interface{})
 			u.Is(2, len(h), "log 1.3 len")
 			u.Is("10.1.2.3", h["ip"], "log 1.3.ip")
-			u.Is("tye", h["user"], "log 1.3.user")
+			u.Is("not_a_user", h["user"], "log 1.3.user")
 		}
 	}
 	log.Reset()
@@ -131,7 +131,7 @@ func TestLager(t *testing.T) {
 		u.Is("message", hash["m"], "log 3.m")
 		u.Is("value", hash["key"], "log 3.key")
 		u.Is("10.0.1.2", hash["ip"], "log 3.ip")
-		u.Is("tye", hash["user"], "log 3.user")
+		u.Is("not_a_user", hash["user"], "log 3.user")
 		u.Like(hash["_stack"], "log 3._stack",
 			`^\[[1-9][0-9]* [^/ ]+/[^/ ]+/lager_test[.]go TestLager\]$`)
 	}
@@ -177,7 +177,7 @@ func TestLager(t *testing.T) {
 		} else {
 			u.Is(2, len(h), "mod 1.3 len")
 			u.Is("10.1.2.3", h["ip"], "mod 1.3.ip")
-			u.Is("tye", h["user"], "mod 1.3.user")
+			u.Is("not_a_user", h["user"], "mod 1.3.user")
 		} */
 	}
 	log.Reset()

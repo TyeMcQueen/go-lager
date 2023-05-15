@@ -1,4 +1,4 @@
-module github.com/TyeMcQueen/go-lager
+module github.com/Unity-Technologies/go-lager-internal
 
 go 1.13
 

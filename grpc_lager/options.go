@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/TyeMcQueen/go-lager"
+	"github.com/Unity-Technologies/go-lager-internal"
 	grpc_logging "github.com/grpc-ecosystem/go-grpc-middleware/logging"
 	"google.golang.org/grpc/codes"
 )
