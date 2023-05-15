@@ -14,7 +14,7 @@ import (
 	"time"
 
 	"github.com/TyeMcQueen/go-lager"
-	"github.com/TyeMcQueen/go-tutl"
+	"github.com/Unity-Technologies/go-tutl-internal"
 )
 
 var _ = os.Stdout

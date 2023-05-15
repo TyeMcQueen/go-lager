@@ -7,7 +7,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/TyeMcQueen/go-tutl"
+	"github.com/Unity-Technologies/go-tutl-internal"
 )
 
 func TestEscape(t *testing.T) {

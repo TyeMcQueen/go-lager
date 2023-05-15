@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/TyeMcQueen/go-lager/gcp-spans"
-	"github.com/TyeMcQueen/go-tutl"
+	"github.com/Unity-Technologies/go-tutl-internal"
 )
 
 type TestSpan struct {

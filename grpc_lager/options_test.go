@@ -7,7 +7,7 @@ import (
 
 	"github.com/TyeMcQueen/go-lager"
 	"github.com/TyeMcQueen/go-lager/grpc_lager"
-	"github.com/TyeMcQueen/go-tutl"
+	"github.com/Unity-Technologies/go-tutl-internal"
 )
 
 func TestDurationToTimeMillisField(t *testing.T) {
